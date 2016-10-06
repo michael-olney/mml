@@ -157,13 +157,13 @@ listpresskitshots (Tag "path" [] (Just [Str fn]):(Tag "suffix" [] (Just [Str suf
 listpresskitshots _ = error "bad usage of macro listpresskitshots"
 
 substlist :: ([Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
-substlist evalFun ((Tag "list" [] (Just xs)):(Tag "bind" [] (Just vnconts)):(Tag "targ" [] (Just targ)):[]) =
+substlist evalFun ((Tag "list" [] (Just xs)):(Tag "bind" [] (Just vnexps)):(Tag "targ" [] (Just targ)):[]) =
     let
         aux varname item = do
             let x = (subst (M.fromList [(varname, [item])]) targ)
             evalFun x
     in do
-        varnameExps <- evalFun vnconts
+        varnameExps <- evalFun vnexps
         (case varnameExps of
             [Str varname] -> (evalFun xs) >>= concatMapM (aux varname)
             e -> error ("bad varname in substlist:" ++ (show e))
