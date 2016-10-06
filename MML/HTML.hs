@@ -8,7 +8,7 @@ header = "<!DOCTYPE HTML>"
 footer = ""
 
 toHTML :: Doc -> String
-toHTML (Doc cs) = header ++ (convConts cs) ++ footer
+toHTML cs = header ++ (convExps cs) ++ footer
 
 -- Intended to be just enough to cover both
 -- character data and double-quoted attribute values
@@ -33,34 +33,34 @@ isValidName (c:cs) = (start c) && (aux cs)
         val c = ((start c) || (isNumber c) || (c == '-')
             || (c == '.'))
 
-convConts :: [Cont] -> String
-convConts = foldl (\s c -> s ++ (conv c)) ""
+convExps :: [Exp] -> String
+convExps = foldl (\s c -> s ++ (conv c)) ""
 
-convAttr :: (String, [Cont]) -> String
+convAttr :: (String, [Exp]) -> String
 convAttr (name, [Str val]) = name ++ "=\"" ++ (escape val) ++ "\""
 convAttr (name, []) = error "attribute values must not be empty"
 convAttr (name, xs@(_:_)) = error ("attribute values must resolve to single value: " ++ (show xs))
 convAttr _ = error "attribute values must resolve to strings"
 
-convAttrs :: [(String, [Cont])] -> String
+convAttrs :: [(String, [Exp])] -> String
 convAttrs = (intercalate " ") . (map convAttr)
 
-convTag :: Cont -> String
+convTag :: Exp -> String
 convTag (Tag name [] Nothing) =
     "<" ++ name ++ "/>"
 convTag (Tag name as Nothing) =
     "<" ++ name ++ " " ++ (convAttrs as) ++ "/>"
 convTag (Tag name [] (Just cs)) =
     "<" ++ name ++ ">"
-    ++ (convConts cs)
+    ++ (convExps cs)
     ++ "</" ++ name ++ ">"
 convTag (Tag name as (Just cs)) =
     "<" ++ name ++ " " ++ (convAttrs as) ++ ">"
-    ++ (convConts cs)
+    ++ (convExps cs)
     ++ "</" ++ name ++ ">"
 
-conv :: Cont -> String
-conv (Macro _ _) = error "macro encountered in MML.HTML"
+conv :: Exp -> String
+conv (Call _ _) = error "macro call encountered in MML.HTML"
 conv t@(Tag name _ _)   | isValidName name  = convTag t
                         | otherwise         =
                             error ("bad tag name: {" ++ name ++ "}")

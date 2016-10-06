@@ -2,36 +2,29 @@ module MML.Types where
 
 import qualified Data.Map as M
 
-{-
-TODO:
-1) Rename Cont to Value
-2) Remove Doc constructor - make Doc a type synonym
--}
+type Doc = [Exp]
 
-data Doc = Doc [Cont]
-    deriving (Show, Eq)
-
-data Cont =
-    Tag String [(String, [Cont])] (Maybe [Cont])
+data Exp =
+    Tag String [(String, [Exp])] (Maybe [Exp])
     | Str String
-    | Macro String [Cont]
+    | Call String [Exp]
     deriving (Show, Eq)
 
-isStr :: Cont -> Bool
+isStr :: Exp -> Bool
 isStr (Str _) = True
 isStr _ = False
 
-unwrap1Str :: Cont -> String
+unwrap1Str :: Exp -> String
 unwrap1Str (Str x) = x
 unwrap1Str _ = error "tried to unwrap non-str"
 
-unwrapStr :: [Cont] -> String
+unwrapStr :: [Exp] -> String
 unwrapStr [Str x] = x
 unwrapStr (x:xs) = error "tried to unwrap non-singular str"
 unwrapStr _ = error "tried to unwrap non-str"
 
-type MacroFun = ([Cont] -> IO [Cont]) -> [Cont] -> IO [Cont]
+type MacroFun = ([Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
 type MacroFuns = M.Map String MacroFun
 
-type Params = M.Map String [Cont]
+type Params = M.Map String [Exp]
 

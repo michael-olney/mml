@@ -22,7 +22,6 @@ Syntax TODO:
 
 {-
 Other TODO:
-1) Split syntax, semantics stuff into different modules
 2) Allow macros to be defined by external executables
 3) Improve traceback for failed macros
 4) Build macros for building new macros - ensure this is modular!

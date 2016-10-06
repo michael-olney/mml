@@ -21,25 +21,25 @@ parseRejectTest str = TestCase (do
             )
         )
 
-basic0 = parseEqTest "<a>" (Doc [Tag "a" [] Nothing])
-basic1 = parseEqTest "<a<x:y>>" (Doc [Tag "a" [("x", [Str "y"])] Nothing])
-basic2 = parseEqTest "<a<x:y><p:q>>" (Doc [
+basic0 = parseEqTest "<a>" ([Tag "a" [] Nothing])
+basic1 = parseEqTest "<a<x:y>>" ([Tag "a" [("x", [Str "y"])] Nothing])
+basic2 = parseEqTest "<a<x:y><p:q>>" ([
     Tag "a" [("x", [Str "y"]), ("p", [Str "q"])] Nothing])
-basic3 = parseEqTest "<a<x:y><p:q>:>" (Doc [
+basic3 = parseEqTest "<a<x:y><p:q>:>" ([
     Tag "a" [("x", [Str "y"]), ("p", [Str "q"])] (Just [])])
-basic4 = parseEqTest "<a<x:y><p:q>:a>" (Doc [
+basic4 = parseEqTest "<a<x:y><p:q>:a>" ([
     Tag "a" [("x", [Str "y"]), ("p", [Str "q"])] (Just [
         Str "a"
     ])])
-basic5 = parseEqTest "<a<x:y><p:q>:a<b>>" (Doc [
+basic5 = parseEqTest "<a<x:y><p:q>:a<b>>" ([
     Tag "a" [("x", [Str "y"]), ("p", [Str "q"])] (Just [
         Str "a", Tag "b" [] Nothing
     ])])
-basic6 = parseEqTest "<a<x:y><p:q>:a<b>c>" (Doc [
+basic6 = parseEqTest "<a<x:y><p:q>:a<b>c>" ([
     Tag "a" [("x", [Str "y"]), ("p", [Str "q"])] (Just [
         Str "a", Tag "b" [] Nothing, Str "c"
     ])])
-basic7 = parseEqTest "<(--a<--b):\\>><\\ :\\>>:a\\<b\\>c>" (Doc [
+basic7 = parseEqTest "<(--a<--b):\\>><\\ :\\>>:a\\<b\\>c>" ([
     Tag "(--a" [("--b)", [Str ">"]), (" ", [Str ">"])] (Just [
         Str "a<b>c"
     ])])
@@ -53,20 +53,20 @@ reject5 = parseRejectTest "<:>"
 reject6 = parseRejectTest "<a::>"
 reject7 = parseRejectTest "a\\"
 
-space0 = parseEqTest " a " (Doc [Str "a"])
-space1 = parseEqTest " a b " (Doc [Str "a b"])
-space2 = parseEqTest " a b   " (Doc [Str "a b"])
-space3 = parseEqTest " a   b   " (Doc [Str "a b"])
-space4 = parseEqTest "    a   b   " (Doc [Str "a b"])
-space5 = parseEqTest "    a  \\ b   " (Doc [Str "a  b"])
-space6 = parseEqTest "    a \\  b   " (Doc [Str "a   b"])
-space7 = parseEqTest "    a \\ <x> b   " (Doc [
+space0 = parseEqTest " a " ([Str "a"])
+space1 = parseEqTest " a b " ([Str "a b"])
+space2 = parseEqTest " a b   " ([Str "a b"])
+space3 = parseEqTest " a   b   " ([Str "a b"])
+space4 = parseEqTest "    a   b   " ([Str "a b"])
+space5 = parseEqTest "    a  \\ b   " ([Str "a  b"])
+space6 = parseEqTest "    a \\  b   " ([Str "a   b"])
+space7 = parseEqTest "    a \\ <x> b   " ([
     Str "a  ", Tag "x" [] Nothing, Str "b"])
-space8 = parseEqTest "\\    a \\ <x> b   " (Doc [
+space8 = parseEqTest "\\    a \\ <x> b   " ([
     Str "  a  ", Tag "x" [] Nothing, Str "b"])
-space9 = parseEqTest "\\ \\\\   a \\ <x> b   " (Doc [
+space9 = parseEqTest "\\ \\\\   a \\ <x> b   " ([
     Str " \\ a  ", Tag "x" [] Nothing, Str "b"])
-space10 = parseEqTest "a\\ " (Doc [Str "a "])
+space10 = parseEqTest "a\\ " ([Str "a "])
 
 tests = TestList [
     TestLabel "basic0" basic0,

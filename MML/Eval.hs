@@ -5,33 +5,33 @@ import Control.Monad
 
 import MML.Types
 
-runMacro :: ([Cont] -> IO [Cont]) -> MacroFuns -> String -> [Cont] -> IO [Cont]
+runMacro :: ([Exp] -> IO [Exp]) -> MacroFuns -> String -> [Exp] -> IO [Exp]
 runMacro evalFun funs name c
                         | M.member name funs = (funs M.! name) evalFun c
                         | otherwise = error ("no such macro '" ++ name ++ "'")
 
-runConts params funs xs =
+runExps params funs xs =
     do
-        ys <- mapM (runCont params funs) (collapse xs)
+        ys <- mapM (runExp params funs) (collapse xs)
         return . collapse . concat $ ys
 
-runOptConts params funs Nothing     = return Nothing
-runOptConts params funs (Just cs)   =
-    (runConts params funs cs) >>= return . Just
+runOptExps params funs Nothing     = return Nothing
+runOptExps params funs (Just cs)   =
+    (runExps params funs cs) >>= return . Just
 
-runCont :: Params -> MacroFuns -> Cont -> IO [Cont]
-runCont params funs (Macro name cs) =
-    runMacro (runConts params funs) funs name cs
-runCont params funs (Tag name as cs)
+runExp :: Params -> MacroFuns -> Exp -> IO [Exp]
+runExp params funs (Call name cs) =
+    runMacro (runExps params funs) funs name cs
+runExp params funs (Tag name as cs)
     | M.member name params = return (params M.! name)
     | otherwise = do
-        cs' <- runOptConts params funs cs
+        cs' <- runOptExps params funs cs
         let (ks, vs) = unzip as
-        vs'<- mapM (runConts params funs) vs
+        vs'<- mapM (runExps params funs) vs
         return [Tag name (zip ks vs') cs']
-runCont params funs c@(Str _) = return [c]
+runExp params funs c@(Str _) = return [c]
 
-collapse :: [Cont] -> [Cont]
+collapse :: [Exp] -> [Exp]
 collapse xs =
     let
         aux e@(Str _) = [e]
@@ -43,11 +43,11 @@ collapse xs =
                 attrs2 = zip keys vals2
             in
                 [Tag name attrs2 children2]
-        aux (Macro name children) =
+        aux (Call name children) =
             let
                 children2 = auxList . join2 $ children
             in
-                [Macro name children2]
+                [Call name children2]
         auxList = concatMap aux
         join2 (x:y:xs)      | isStr x && isStr y
                             = join2 ((Str ((unwrap1Str x) ++ (unwrap1Str y))):xs)
@@ -59,4 +59,5 @@ collapse xs =
         auxList xs
 
 eval :: Params -> MacroFuns -> Doc -> IO Doc
-eval params funs (Doc cs) = (runConts params funs cs) >>= return . Doc . collapse
+eval params funs cs
+    = (runExps params funs cs) >>= return . collapse

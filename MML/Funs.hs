@@ -28,7 +28,7 @@ import Data.ByteString.Lazy as B (writeFile)
 convParam (Tag name [] (Just v)) = (name, v)
 convParam _ = error "wrong form for parameter"
 
-inc :: [Cont] -> IO [Cont]
+inc :: [Exp] -> IO [Exp]
 inc ((Str fn):rest) = do
     let params = M.fromList . (map convParam) $ rest
     ih <- openBinaryFile fn ReadMode
@@ -39,15 +39,14 @@ inc ((Str fn):rest) = do
         (Right doc) -> return doc
         )
     doc2 <- eval params funs doc
-    let (Doc conts) = doc2
 
     hClose ih
-    return conts
+    return doc2
 inc _ = error "wrong form for macro 'inc'"
 
 -- XXX split into three ops
 
-subst :: Params -> [Cont] -> [Cont]
+subst :: Params -> [Exp] -> [Exp]
 subst params = auxList
     where
         aux (Tag name attrs children)
@@ -59,7 +58,7 @@ subst params = auxList
                 in
                     [Tag name attrs2 ((liftM auxList) children)]
         aux e@(Str _) = [e]
-        aux (Macro name cs) = [Macro name (auxList cs)]
+        aux (Call name cs) = [Call name (auxList cs)]
         auxList = concatMap aux
 subst _ = error "wrong form for macro 'include'"
 
@@ -74,7 +73,7 @@ resizeJuicy (ImageRGBA8 img) w h =
     ImageRGBA8 . toJuicyRGBA . (resizeFriday w h). toFridayRGBA $ img
 resizeJuicy _ w h = error "unsupported pixel format"
 
-resizesingle :: Cont -> IO Cont
+resizesingle :: Exp -> IO Exp
 resizesingle e@(Tag "img" as Nothing) = do
     let asm = M.fromList as
     let attr = unwrapStr . (asm M.!)
@@ -101,10 +100,10 @@ resizesingle (Tag name as (Just x)) = do
     return (Tag name as (Just y))
 resizesingle x = return x
 
-resizeimgs :: [Cont] -> IO [Cont]
+resizeimgs :: [Exp] -> IO [Exp]
 resizeimgs = mapM resizesingle
 
-filesize :: [Cont] -> IO [Cont]
+filesize :: [Exp] -> IO [Exp]
 filesize [(Str fn)] = do
     h <- openFile fn ReadMode
     sz <- hFileSize h
@@ -123,7 +122,7 @@ linksingle e@(Tag "img" as x) =
 linksingle (Tag name as (Just x)) = Tag name as (Just (linkimgs x))
 linksingle e = e
 
-linkimgs :: [Cont] -> [Cont]
+linkimgs :: [Exp] -> [Exp]
 linkimgs = map linksingle
 
 kilobyte = 1024 :: Int
@@ -138,7 +137,7 @@ units = [
     ("KB", kilobyte)
     ]
 
-prettyfilesize :: [Cont] -> [Cont]
+prettyfilesize :: [Exp] -> [Exp]
 prettyfilesize [(Str x)] =
     let
         v = read x
@@ -150,22 +149,22 @@ prettyfilesize [(Str x)] =
         [Str (aux units)] 
 prettyfilesize _ = error "bad usage of macro prettyfilesize"
 
-listpresskitshots :: [Cont] -> IO [Cont]
+listpresskitshots :: [Exp] -> IO [Exp]
 listpresskitshots (Tag "path" [] (Just [Str fn]):(Tag "suffix" [] (Just [Str suffix])):[]) = do
     xs <- getDirectoryContents fn
     let aux x = take ((length x) - (length suffix)) x
     return . (map Str) . (map aux) . filter (isSuffixOf suffix) $ xs
 listpresskitshots _ = error "bad usage of macro listpresskitshots"
 
-substlist :: ([Cont] -> IO [Cont]) -> [Cont] -> IO [Cont]
+substlist :: ([Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
 substlist evalFun ((Tag "list" [] (Just xs)):(Tag "bind" [] (Just vnconts)):(Tag "targ" [] (Just targ)):[]) =
     let
         aux varname item = do
             let x = (subst (M.fromList [(varname, [item])]) targ)
             evalFun x
     in do
-        varnameConts <- evalFun vnconts
-        (case varnameConts of
+        varnameExps <- evalFun vnconts
+        (case varnameExps of
             [Str varname] -> (evalFun xs) >>= concatMapM (aux varname)
             e -> error ("bad varname in substlist:" ++ (show e))
             )
@@ -181,7 +180,7 @@ unwrapJust :: Maybe a -> a
 unwrapJust Nothing = error "unwrap Just failed"
 unwrapJust (Just x) = x
 
-createzip :: [Cont] -> IO [Cont]
+createzip :: [Exp] -> IO [Exp]
 createzip ((Tag "outfilename" [] (Just [Str outfn])):(Tag "filenames" [] (Just fs)):(Tag "pathtrim" [] (Just [Str pathtrimstr])):(Tag "outbase" [] (Just [Str outbase])):[]) = do
     putStr ("Creating " ++ outfn ++ "..\n")
     let (pathtrim::Int) = read pathtrimstr

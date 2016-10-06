@@ -43,17 +43,17 @@ doc :: Parser Doc
 doc = do
     cs <- conts
     eof
-    return (Doc cs)
+    return cs
 
-cont :: Parser Cont
+cont :: Parser Exp
 cont = (try str) <|> (do { r <- (tag <|> meta); whitespaces; return r})
 
-conts :: Parser [Cont]
+conts :: Parser [Exp]
 conts = do
     whitespaces
     many (do { r <- cont; whitespaces; return r; })
 
-attr :: Parser (String, [Cont])
+attr :: Parser (String, [Exp])
 attr = do
     string "<"
     whitespaces
@@ -64,7 +64,7 @@ attr = do
     string ">"
     return (name, val)
 
-meta :: Parser Cont
+meta :: Parser Exp
 meta = do
     string "{"
     whitespaces
@@ -73,9 +73,9 @@ meta = do
     string ":"
     cs <- conts
     string "}"
-    return (Macro name cs)
+    return (Call name cs)
 
-tag :: Parser Cont
+tag :: Parser Exp
 tag = do
     string "<"
     whitespaces
@@ -85,12 +85,12 @@ tag = do
         _ -> fail "name must be STRING value"
     whitespaces
     attrs <- endBy attr whitespaces
-    cont <- optionMaybe tagConts
+    cont <- optionMaybe tagExps
     string ">"
     return (Tag name attrs cont)
 
-tagConts :: Parser [Cont]
-tagConts = do
+tagExps :: Parser [Exp]
+tagExps = do
     string ":"
     conts
 
@@ -117,7 +117,7 @@ gap = do
     r <- many1 . oneOf $ whitespace
     return . Right $ r
 
-str :: Parser Cont
+str :: Parser Exp
 str = do
     xs <- many1 (word <|> gap)
     let ss = concat . (map dropEither) . rmTrailing . (map collapseSpaces) $ xs
