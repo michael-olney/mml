@@ -180,19 +180,18 @@ tagConts = do
     string ":"
     conts
 
-collapseSpaces :: Either String String -> String
-collapseSpaces (Left e)                                     = e
-collapseSpaces (Right e@(x:xs))     | elem x whitespace     = " "
+collapseSpaces :: Either String String -> Either String String
+collapseSpaces e@(Left _)                                   = e
+collapseSpaces e@(Right (x:xs))     | elem x whitespace     = Right " "
                                     | otherwise             = e
-rmTrailing :: [String] -> [String]
-rmTrailing []                               = []
-rmTrailing xs@(_:_)     | last xs == " "    = take (length xs - 1) xs
-                        | otherwise         = xs
+rmTrailing :: [Either String String] -> [Either String String]
+rmTrailing []                                       = []
+rmTrailing xs@(_:_)     | last xs == (Right " ")    = take (length xs - 1) xs
+                        | otherwise                 = xs
 
-rmLeading :: [String] -> [String]
-rmLeading []                            = []
-rmLeading xs@(_:_)  | head xs == " "    = drop 1 xs
-                    | otherwise         = xs
+dropEither :: Either a a -> a
+dropEither (Left x)     = x
+dropEither (Right x)    = x
 
 word :: Parser (Either String String)
 word = do
@@ -207,5 +206,5 @@ gap = do
 str :: Parser Cont
 str = do
     xs <- many1 (word <|> gap)
-    let ss = concat . rmTrailing . (map collapseSpaces) $ xs
+    let ss = concat . (map dropEither) . rmTrailing . (map collapseSpaces) $ xs
     return . Str $ ss

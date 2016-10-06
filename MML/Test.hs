@@ -8,7 +8,7 @@ import System.Exit
 
 parseEqTest str v = TestCase (do
         doc <- parseMML M.empty M.empty "<unknown>" str
-        assertEqual "" doc v
+        assertEqual "" v doc
         )
 parseRejectTest str = TestCase (do
         r <- parseMML2 M.empty M.empty "<unknown>" str
@@ -49,6 +49,16 @@ reject4 = parseRejectTest "<<<>>"
 reject5 = parseRejectTest "<:>"
 reject6 = parseRejectTest "<a::>"
 
+space0 = parseEqTest " a " (Doc [Str "a"])
+space1 = parseEqTest " a b " (Doc [Str "a b"])
+space2 = parseEqTest " a b   " (Doc [Str "a b"])
+space3 = parseEqTest " a   b   " (Doc [Str "a b"])
+space4 = parseEqTest "    a   b   " (Doc [Str "a b"])
+space5 = parseEqTest "    a  \\ b   " (Doc [Str "a  b"])
+space6 = parseEqTest "    a \\  b   " (Doc [Str "a   b"])
+space7 = parseEqTest "    a \\ <x> b   " (Doc [
+    Str "a  ", Tag "x" [] Nothing, Str "b"])
+
 tests = TestList [
     TestLabel "basic0" basic0,
     TestLabel "basic1" basic1 ,
@@ -64,7 +74,15 @@ tests = TestList [
     TestLabel "reject3" reject3,
     TestLabel "reject4" reject4,
     TestLabel "reject5" reject5,
-    TestLabel "reject6" reject6
+    TestLabel "reject6" reject6,
+    TestLabel "space0" space0,
+    TestLabel "space1" space1,
+    TestLabel "space2" space2,
+    TestLabel "space3" space3,
+    TestLabel "space4" space4,
+    TestLabel "space5" space5,
+    TestLabel "space6" space6,
+    TestLabel "space7" space7
     ]
 
 main :: IO ()
