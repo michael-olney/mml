@@ -29,3 +29,6 @@ main = do
 
     hClose oh
     hClose ih
+
+    putStr . show $ doc
+    putStr "\n"

@@ -9,17 +9,19 @@ module MML (
 import MML.Types
 import MML.HTML
 import Text.ParserCombinators.Parsec
+import Text.ParserCombinators.Parsec.Prim
 import qualified Data.Map as M
 import Control.Monad
+import Data.List
 
 {-
 Syntax TODO:
-1) Eat more whitespace
 2) Change {} to <%>
-3) Introduce variables ==> <$> (pass env to macros)
+3) Introduce variables ==> <$> (pass env to macros, think about hygiene..)
 4) Change colon to another character
 5) Add version specifier to head!
 6) Allow empty strings to be expressed
+7) Allow strings to be split - revamp collapsing too
 -}
 
 {-
@@ -31,22 +33,6 @@ Other TODO:
 5) Dependency analysis
 -}
 
-eaters = "<:>~%"
-special = eaters ++ "\\"
-whitespace = " \x0d\x0a\t"
-
-escapable s = do
-    do
-        char '\\'
-        anyChar
-    <|> noneOf s
-
-nameChar = escapable (special ++ whitespace)
-ordinary = escapable special
-
-whitespaces = many . oneOf $ whitespace
-
--- TODO detect macro returning macro here
 runMacro :: ([Cont] -> IO [Cont]) -> MacroFuns -> String -> [Cont] -> IO [Cont]
 runMacro evalFun funs name c
                         | M.member name funs = (funs M.! name) evalFun c
@@ -111,20 +97,38 @@ parseMML params funs name mml = let
             (Left err)  -> error . show $ err
             (Right doc) -> run params funs doc)
 
-conts :: Parser [Cont]
-conts = do
-    many1 (meta <|> tag <|> str)
-    <|> return []
+eaters = "<>{}:"
+special = eaters ++ "\\"
+whitespace = " \x0d\x0a\t"
+
+escapable s = do
+    do
+        char '\\'
+        anyChar
+    <|> noneOf s
+
+nameChar = escapable (special ++ whitespace)
+
+ordinary :: Parser Char
+ordinary = escapable special
+
+
+whitespaces :: Parser String
+whitespaces = many . oneOf $ whitespace
 
 doc :: Parser Doc
 doc = do
     cs <- conts
-    whitespaces
     eof
     return (Doc cs)
 
 cont :: Parser Cont
-cont = tag <|> meta <|> str
+cont = (try str) <|> (do { r <- (tag <|> meta); whitespaces; return r})
+
+conts :: Parser [Cont]
+conts = do
+    whitespaces
+    many (do { r <- cont; whitespaces; return r; })
 
 attr :: Parser (String, [Cont])
 attr = do
@@ -133,7 +137,7 @@ attr = do
     name <- many nameChar
     whitespaces
     string ":"
-    val <- many cont
+    val <- conts
     string ">"
     return (name, val)
 
@@ -145,7 +149,6 @@ meta = do
     whitespaces
     string ":"
     cs <- conts
-    whitespaces
     string "}"
     return (Macro name cs)
 
@@ -153,22 +156,47 @@ tag :: Parser Cont
 tag = do
     string "<"
     whitespaces
-    name <- many nameChar
+    x <- cont
+    name <- case x of
+        (Str name) -> return name
+        _ -> fail "name must be STRING value"
     whitespaces
     attrs <- endBy attr whitespaces
-    whitespaces
     cont <- optionMaybe tagConts
-    whitespaces
     string ">"
     return (Tag name attrs cont)
 
 tagConts :: Parser [Cont]
 tagConts = do
     string ":"
-    many cont
+    conts
+
+collapseSpaces :: Either String String -> String
+collapseSpaces (Left e)                                     = e
+collapseSpaces (Right e@(x:xs))     | elem x whitespace     = " "
+                                    | otherwise             = e
+rmTrailing :: [String] -> [String]
+rmTrailing []                               = []
+rmTrailing xs@(_:_)     | last xs == " "    = take (length xs - 1) xs
+                        | otherwise         = xs
+
+rmLeading :: [String] -> [String]
+rmLeading []                            = []
+rmLeading xs@(_:_)  | head xs == " "    = drop 1 xs
+                    | otherwise         = xs
+
+word :: Parser (Either String String)
+word = do
+    r <- many1 (escapable (special ++ whitespace))
+    return . Left $ r
+
+gap :: Parser (Either String String)
+gap = do
+    r <- many1 . oneOf $ whitespace
+    return . Right $ r
 
 str :: Parser Cont
 str = do
-    ss <- many1 ordinary
-    return (Str ss)
-
+    xs <- many1 (word <|> gap)
+    let ss = concat . rmTrailing . (map collapseSpaces) $ xs
+    return . Str $ ss

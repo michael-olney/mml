@@ -57,6 +57,6 @@ conv :: Cont -> String
 conv (Macro _ _) = error "macro encountered in MML.HTML"
 conv t@(Tag name _ _)   | isValidName name  = convTag t
                         | otherwise         =
-                            error ("bad tag name: " ++ name)
+                            error ("bad tag name: {" ++ name ++ "}")
 conv (Str s) = escape s
 

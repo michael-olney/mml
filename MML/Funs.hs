@@ -160,7 +160,7 @@ substlist evalFun ((Tag "list" [] (Just xs)):(Tag "bind" [] (Just vnconts)):(Tag
             [Str varname] -> (evalFun xs) >>= concatMapM (aux varname)
             e -> error ("bad varname in substlist:" ++ (show e))
             )
-substlist _ _ = error "bad usage of macro substlist" 
+substlist _ e = error ("bad usage of macro substlist:" ++ (show e))
 
 dropPath :: Int -> FilePath -> FilePath
 dropPath n = joinPath . (drop n) . splitPath
