@@ -58,6 +58,10 @@ space5 = parseEqTest "    a  \\ b   " (Doc [Str "a  b"])
 space6 = parseEqTest "    a \\  b   " (Doc [Str "a   b"])
 space7 = parseEqTest "    a \\ <x> b   " (Doc [
     Str "a  ", Tag "x" [] Nothing, Str "b"])
+space8 = parseEqTest "\\    a \\ <x> b   " (Doc [
+    Str "  a  ", Tag "x" [] Nothing, Str "b"])
+space9 = parseEqTest "\\ \\\\   a \\ <x> b   " (Doc [
+    Str " \\ a  ", Tag "x" [] Nothing, Str "b"])
 
 tests = TestList [
     TestLabel "basic0" basic0,
@@ -82,7 +86,9 @@ tests = TestList [
     TestLabel "space4" space4,
     TestLabel "space5" space5,
     TestLabel "space6" space6,
-    TestLabel "space7" space7
+    TestLabel "space7" space7,
+    TestLabel "space8" space8,
+    TestLabel "space9" space9
     ]
 
 main :: IO ()
