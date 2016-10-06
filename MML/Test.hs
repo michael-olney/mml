@@ -7,11 +7,14 @@ import Test.HUnit
 import System.Exit
 
 parseEqTest str v = TestCase (do
-        doc <- parseMML M.empty M.empty "<unknown>" str
-        assertEqual "" v doc
+        r <- parse M.empty M.empty "<unknown>" str
+        (case r of 
+            (Left _)    -> assertBool "parser should accept this" False
+            (Right doc) -> assertEqual "" v doc
+            )        
         )
 parseRejectTest str = TestCase (do
-        r <- parseMML2 M.empty M.empty "<unknown>" str
+        r <- parse M.empty M.empty "<unknown>" str
         (case r of
             (Right _)   -> assertBool "parser should reject this" False
             _           -> return ()

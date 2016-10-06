@@ -23,8 +23,14 @@ main = do
     oh <- openBinaryFile outFile WriteMode
 
     inp <- hGetContents ih
-    doc <- parseMML M.empty funs fn inp
-    (hPutStr oh) . toHTML $ doc
+    r <- parse M.empty funs fn inp
+    let doc = (case r of
+            (Left err)  -> error $ "parse error: " ++ (show err)
+            (Right doc) -> doc
+            )
+    doc2 <- eval M.empty funs doc
+
+    (hPutStr oh) . toHTML $ doc2
     hPutStr oh "\n"
 
     hClose oh

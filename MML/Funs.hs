@@ -6,6 +6,8 @@ module MML.Funs (MacroFun, MacroFuns, funs) where
 
 import MML
 import MML.Types
+import MML.Parse
+import MML.Eval
 import qualified Data.Map as M
 import Data.Char
 import Data.List
@@ -31,9 +33,16 @@ inc ((Str fn):rest) = do
     let params = M.fromList . (map convParam) $ rest
     ih <- openBinaryFile fn ReadMode
     inp <- hGetContents ih
-    (Doc doc) <- parseMML params funs ("include: " ++ fn) inp
+    r <- parse params funs ("include: " ++ fn) inp
+    doc <- (case r of
+        (Left err)  -> error $ "parse error: " ++ (show err)
+        (Right doc) -> return doc
+        )
+    doc2 <- eval params funs doc
+    let (Doc conts) = doc2
+
     hClose ih
-    return doc
+    return conts
 inc _ = error "wrong form for macro 'inc'"
 
 -- XXX split into three ops
