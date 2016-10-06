@@ -2,6 +2,7 @@
 
 module MML (
     parseMML,
+    parseMML2,
     module MML.Types,
     module MML.HTML
     ) where
@@ -88,6 +89,14 @@ collapse xs =
 
 run :: Params -> MacroFuns -> Doc -> IO Doc
 run params funs (Doc cs) = (runConts params funs cs) >>= return . Doc . collapse
+
+parseMML2 :: Params -> MacroFuns -> String -> String -> IO (Either String Doc)
+parseMML2 params funs name mml = let
+    r = parse doc name mml
+    in
+        (case r of
+            (Left err)  -> return . Left . show $ err
+            (Right doc) -> run params funs doc >>= return . Right)
 
 parseMML :: Params -> MacroFuns -> String -> String -> IO Doc
 parseMML params funs name mml = let
