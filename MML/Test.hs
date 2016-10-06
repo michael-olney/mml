@@ -48,6 +48,7 @@ reject3 = parseRejectTest "<>>"
 reject4 = parseRejectTest "<<<>>"
 reject5 = parseRejectTest "<:>"
 reject6 = parseRejectTest "<a::>"
+reject7 = parseRejectTest "a\\"
 
 space0 = parseEqTest " a " (Doc [Str "a"])
 space1 = parseEqTest " a b " (Doc [Str "a b"])
@@ -62,6 +63,7 @@ space8 = parseEqTest "\\    a \\ <x> b   " (Doc [
     Str "  a  ", Tag "x" [] Nothing, Str "b"])
 space9 = parseEqTest "\\ \\\\   a \\ <x> b   " (Doc [
     Str " \\ a  ", Tag "x" [] Nothing, Str "b"])
+space10 = parseEqTest "a\\ " (Doc [Str "a "])
 
 tests = TestList [
     TestLabel "basic0" basic0,
@@ -79,6 +81,7 @@ tests = TestList [
     TestLabel "reject4" reject4,
     TestLabel "reject5" reject5,
     TestLabel "reject6" reject6,
+    TestLabel "reject7" reject7,
     TestLabel "space0" space0,
     TestLabel "space1" space1,
     TestLabel "space2" space2,
@@ -88,7 +91,8 @@ tests = TestList [
     TestLabel "space6" space6,
     TestLabel "space7" space7,
     TestLabel "space8" space8,
-    TestLabel "space9" space9
+    TestLabel "space9" space9,
+    TestLabel "space10" space10
     ]
 
 main :: IO ()
