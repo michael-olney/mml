@@ -46,8 +46,14 @@ convAttrs :: [(String, [Cont])] -> String
 convAttrs = (intercalate " ") . (map convAttr)
 
 convTag :: Cont -> String
+convTag (Tag name [] Nothing) =
+    "<" ++ name ++ "/>"
 convTag (Tag name as Nothing) =
     "<" ++ name ++ " " ++ (convAttrs as) ++ "/>"
+convTag (Tag name [] (Just cs)) =
+    "<" ++ name ++ ">"
+    ++ (convConts cs)
+    ++ "</" ++ name ++ ">"
 convTag (Tag name as (Just cs)) =
     "<" ++ name ++ " " ++ (convAttrs as) ++ ">"
     ++ (convConts cs)
