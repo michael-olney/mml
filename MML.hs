@@ -14,6 +14,7 @@ import MML.HTML
 
 {-
 Syntax TODO:
+-1) Eliminate automatic string collapsing
 0) Make attrs insensitive to ordering (Data.Map or something like that)
 1) Do parsing of attribute keys with Str
 2) Change {} to <%>
@@ -21,9 +22,8 @@ Syntax TODO:
 4) Change colon to another character
 5) Add version specifier to head!
 6) Allow empty strings to be expressed
-7) Allow strings to be split - revamp collapsing too
-8) Introduce code escaping mode
-9) Handle different kinds of whitespace
+7) Introduce code escaping mode
+8) Handle different kinds of whitespace
 -}
 
 {-
