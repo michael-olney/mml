@@ -9,6 +9,8 @@ import Text.ParserCombinators.Parsec.Prim hiding (parse)
 import Control.Monad
 import Data.List
 
+import qualified MML.Parsev0 as V0
+
 import MML.Types
 import MML.Eval
 
@@ -21,8 +23,7 @@ parse params funs name mml = let
             (Right x)   -> return . Right $ x
             )
 
-eaters = "<>{}:"
-special = eaters ++ "\\"
+special = "<>{}:\\"
 whitespace = " \x0d\x0a\t"
 
 escapable s = do

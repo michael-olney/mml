@@ -21,6 +21,15 @@ parseRejectTest str = TestCase (do
             )
         )
 
+roundTripTest e = TestCase (do
+        let txt = unparse e
+        r <- parse M.empty M.empty "<unknown>" txt
+        (case r of
+            (Right e2)   -> assertEqual "round trip test" e e2
+            _            -> assertBool ("roundtrip rejection: " ++ txt) False
+            )
+        )
+
 basic0 = parseEqTest "<a>" ([Tag "a" [] Nothing])
 basic1 = parseEqTest "<a<x:y>>" ([Tag "a" [("x", [Str "y"])] Nothing])
 basic2 = parseEqTest "<a<x:y><p:q>>" ([
@@ -68,6 +77,24 @@ space9 = parseEqTest "\\ \\\\   a \\ <x> b   " ([
     Str " \\ a  ", Tag "x" [] Nothing, Str "b"])
 space10 = parseEqTest "a\\ " ([Str "a "])
 
+roundtrip0 = roundTripTest [Tag "a" [] Nothing]
+roundtrip1 = roundTripTest [Tag "a" [] (Just [Str "b"])]
+-- TODO string separation..
+--roundtrip2 = roundTripTest [Tag "a" [] (Just [Str "b", Str "c"])]
+roundtrip3 = roundTripTest [Tag "a" [] (Just [Str "b", Tag "c" [] Nothing, Str "d"])]
+roundtrip4 = roundTripTest [Tag "a" [] (Just [Str "b ", Tag "c" [] Nothing, Str " d "])]
+roundtrip5 = roundTripTest [
+        Tag "a" [("x", [Str "y"])]
+        (Just [Str "b ", Tag "c" [] Nothing, Str " d "])
+    ]
+roundtrip6 = roundTripTest [
+        Tag " a\\" [(">", [Str " <\\ "])]
+        (Just [Str "b ", Tag "\\c " [] Nothing, Str " d "])
+    ]
+roundtrip7 = roundTripTest [
+        Call " a\\" [Str "b ", Tag "\\c " [] Nothing, Str " d "]
+    ]
+
 tests = TestList [
     TestLabel "basic0" basic0,
     TestLabel "basic1" basic1 ,
@@ -95,7 +122,15 @@ tests = TestList [
     TestLabel "space7" space7,
     TestLabel "space8" space8,
     TestLabel "space9" space9,
-    TestLabel "space10" space10
+    TestLabel "space10" space10,
+    TestLabel "roundtrip0" roundtrip0,
+    TestLabel "roundtrip1" roundtrip1,
+    --TestLabel "roundtrip2" roundtrip2,
+    TestLabel "roundtrip3" roundtrip3,
+    TestLabel "roundtrip4" roundtrip4,
+    TestLabel "roundtrip5" roundtrip5,
+    TestLabel "roundtrip6" roundtrip6,
+    TestLabel "roundtrip7" roundtrip7
     ]
 
 main :: IO ()
