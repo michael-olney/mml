@@ -14,6 +14,7 @@ import MML.HTML
 
 {-
 Syntax TODO:
+0) Make attrs insensitive to ordering (Data.Map or something like that)
 1) Do parsing of attribute keys with Str
 2) Change {} to <%>
 3) Introduce variables ==> <$> (pass env to macros, think about hygiene..)

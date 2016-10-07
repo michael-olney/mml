@@ -79,8 +79,7 @@ space10 = parseEqTest "a\\ " ([Str "a "])
 
 roundtrip0 = roundTripTest [Tag "a" [] Nothing]
 roundtrip1 = roundTripTest [Tag "a" [] (Just [Str "b"])]
--- TODO string separation..
---roundtrip2 = roundTripTest [Tag "a" [] (Just [Str "b", Str "c"])]
+roundtrip2 = roundTripTest [Tag "a" [] (Just [Str "b", Str "c"])]
 roundtrip3 = roundTripTest [Tag "a" [] (Just [Str "b", Tag "c" [] Nothing, Str "d"])]
 roundtrip4 = roundTripTest [Tag "a" [] (Just [Str "b ", Tag "c" [] Nothing, Str " d "])]
 roundtrip5 = roundTripTest [
@@ -94,6 +93,12 @@ roundtrip6 = roundTripTest [
 roundtrip7 = roundTripTest [
         Call " a\\" [Str "b ", Tag "\\c " [] Nothing, Str " d "]
     ]
+roundtrip8 = roundTripTest [Str " "]
+roundtrip9 = roundTripTest [Str ""]
+
+stringsep0 = parseEqTest " a ~ b " ([Str "a", Str "b"])
+stringsep1 = parseRejectTest " a ~~ b "
+stringsep2 = parseRejectTest "~a"
 
 tests = TestList [
     TestLabel "basic0" basic0,
@@ -125,12 +130,17 @@ tests = TestList [
     TestLabel "space10" space10,
     TestLabel "roundtrip0" roundtrip0,
     TestLabel "roundtrip1" roundtrip1,
-    --TestLabel "roundtrip2" roundtrip2,
+    TestLabel "roundtrip2" roundtrip2,
     TestLabel "roundtrip3" roundtrip3,
     TestLabel "roundtrip4" roundtrip4,
     TestLabel "roundtrip5" roundtrip5,
     TestLabel "roundtrip6" roundtrip6,
-    TestLabel "roundtrip7" roundtrip7
+    TestLabel "roundtrip7" roundtrip7,
+    TestLabel "roundtrip8" roundtrip8,
+    TestLabel "roundtrip9" roundtrip9,
+    TestLabel "stringsep0" stringsep0,
+    TestLabel "stringsep1" stringsep1,
+    TestLabel "stringsep2" stringsep2
     ]
 
 main :: IO ()

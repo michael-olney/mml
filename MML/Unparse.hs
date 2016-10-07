@@ -3,13 +3,14 @@ module MML.Unparse (unparse) where
 import MML.Types
 import Text.PrettyPrint hiding (Doc, Str)
 import qualified Text.PrettyPrint as PP
-import qualified Data.List (elem)
+import Data.List (elem, groupBy, intersperse)
+
+data PseudoExp = StrSep
 
 unparse :: Doc -> String
---unparse xs = aux (Tag "?mml-version" [] [Str "0"])
-unparse xs = fullRender LeftMode 1 1 aux2 "" (aux xs)
+--unparse xs = unparseExp (Tag "?mml-version" [] [Str "0"])
+unparse xs = fullRender LeftMode 1 1 aux2 "" (unparseExps xs)
     where
-        aux = (foldr (<>) empty) . (map unparseExp)
         aux2 (PP.Chr c) x = c:x
         aux2 (PP.Str s) x = s ++ x
 
@@ -27,9 +28,28 @@ unparseExp (Call name children) =
     <> unparseChildren (Just children)
     <> text "}"
 
+unparsePseudoExp :: Either PseudoExp Exp -> PP.Doc
+unparsePseudoExp (Left StrSep)  = text "~"
+unparsePseudoExp (Right e)      = unparseExp e
+
+unparseExps :: [Exp] -> PP.Doc
+unparseExps = (foldr (<>) empty)
+        . (map unparsePseudoExp)
+        . (concatMap separate)
+        . (groupBy groupFun)
+        . (map Right)
+    where
+        groupFun x y                    = isStr x == isStr y
+        separate xs     | isStrList xs  = intersperse (Left StrSep) xs
+                        | otherwise     = xs
+        isStrList ((Right (Str _)):_)   = True
+        isStrList (_:_)                 = False
+        isStr (Right (Str _))           = True
+        isStr _                         = False
+
 unparseChildren :: Maybe [Exp] -> PP.Doc
 unparseChildren Nothing     = empty
-unparseChildren (Just xs)   = text ":" <> ((foldr (<>) empty) . (map unparseExp) $ xs)
+unparseChildren (Just xs)   = text ":" <> unparseExps xs
 
 unparseAttrs :: [(String, [Exp])] -> PP.Doc
 unparseAttrs = (foldr (<>) empty) . (map unparseAttr)
@@ -39,10 +59,10 @@ unparseAttr (name, es) =
     text "<"
     <> unparseStr name
     <> text ":"
-    <> ((foldr (<>) empty) . (map unparseExp)) es
+    <> unparseExps es
     <> text ">"
 
-special = "<>{}:\\"
+special = "<>{}:\\~"
 whitespace = " \x0d\x0a\t"
 escaped = special ++ whitespace
 

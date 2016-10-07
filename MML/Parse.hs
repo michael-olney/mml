@@ -23,7 +23,7 @@ parse params funs name mml = let
             (Right x)   -> return . Right $ x
             )
 
-special = "<>{}:\\"
+special = "<>{}:\\~"
 whitespace = " \x0d\x0a\t"
 
 escapable s = do
@@ -48,7 +48,9 @@ doc = do
     return cs
 
 exp :: Parser Exp
-exp = (try str) <|> (do { r <- (tag <|> meta); whitespaces; return r})
+exp =
+    (do { r <- str; optional (do { string "~"; whitespaces}); return r })
+    <|> (do { r <- (tag <|> meta); whitespaces; return r})
 
 exps :: Parser [Exp]
 exps = do
