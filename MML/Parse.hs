@@ -23,7 +23,7 @@ parse params funs name mml = let
             (Right x)   -> return . Right $ x
             )
 
-special = "<>{}:\\~"
+special = "<>{}:\\~%"
 whitespace = " \x0d\x0a\t"
 
 escapable s = do
@@ -32,11 +32,8 @@ escapable s = do
         anyChar
     <|> noneOf s
 
-nameChar = escapable (special ++ whitespace)
-
 ordinary :: Parser Char
 ordinary = escapable special
-
 
 whitespaces :: Parser String
 whitespaces = many . oneOf $ whitespace
@@ -61,8 +58,10 @@ attr :: Parser (String, [Exp])
 attr = do
     string "<"
     whitespaces
-    name <- many nameChar
-    whitespaces
+    x <- exp
+    name <- case x of
+        (Str name) -> return name
+        _ -> fail "name must be STRING value"    whitespaces
     string ":"
     val <- exps
     string ">"
@@ -72,8 +71,10 @@ meta :: Parser Exp
 meta = do
     string "{"
     whitespaces
-    name <- many nameChar
-    whitespaces
+    x <- exp
+    name <- case x of
+        (Str name) -> return name
+        _ -> fail "name must be STRING value"    whitespaces
     string ":"
     cs <- exps
     string "}"
@@ -122,7 +123,12 @@ gap = do
     return . Right $ r
 
 str :: Parser Exp
-str = do
-    xs <- many1 (word <|> gap)
-    let ss = concat . (map dropEither) . rmTrailing . (map collapseSpaces) $ xs
-    return . Str $ ss
+str =
+    (do
+        string "%"
+        whitespaces
+        return . Str $ "")
+    <|> (do
+        xs <- many1 (word <|> gap)
+        let ss = concat . (map dropEither) . rmTrailing . (map collapseSpaces) $ xs
+        return . Str $ ss)

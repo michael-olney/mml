@@ -21,9 +21,8 @@ Syntax TODO:
 3) Introduce variables ==> <$> (pass env to macros, think about hygiene..)
 4) Change colon to another character
 5) Add version specifier to head!
-6) Allow empty strings to be expressed
-7) Introduce code escaping mode
-8) Handle different kinds of whitespace
+6) Introduce code escaping mode
+7) Handle different kinds of whitespace
 -}
 
 {-
