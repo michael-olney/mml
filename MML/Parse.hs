@@ -47,7 +47,7 @@ doc = do
 exp :: Parser Exp
 exp =
     (do { r <- str; optional (do { string "~"; whitespaces}); return r })
-    <|> (do { r <- (tag <|> call); whitespaces; return r})
+    <|> (do { r <- (call <|> tag); whitespaces; return r})
 
 exps :: Parser [Exp]
 exps = do
@@ -80,7 +80,7 @@ traceback macroname = do
 
 call :: Parser Exp
 call = do
-    string "{"
+    try $ string  "<%"
     whitespaces
     x <- exp
     name <- case x of
@@ -89,7 +89,7 @@ call = do
     tb <- traceback name
     string ":"
     cs <- exps
-    string "}"
+    string ">"
     return (Call tb name cs)
 
 tag :: Parser Exp

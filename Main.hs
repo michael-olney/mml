@@ -25,7 +25,7 @@ main = do
     inp <- hGetContents ih
     r <- parse M.empty funs fn inp
     let doc = (case r of
-            (Left err)  -> error $ "parse error: " ++ (show err)
+            (Left err)  -> error $ "parse error: " ++ err
             (Right doc) -> doc
             )
     doc2 <- eval (Ctx [] M.empty funs) doc

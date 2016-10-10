@@ -36,7 +36,7 @@ inc ((Str fn):rest) = do
     inp <- hGetContents ih
     r <- parse params funs ("include: " ++ fn) inp
     doc <- (case r of
-        (Left err)  -> error $ "parse error: " ++ (show err)
+        (Left err)  -> error $ "parse error: " ++ err
         (Right doc) -> return doc
         )
     doc2 <- eval (Ctx [] params funs) doc

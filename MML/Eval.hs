@@ -2,7 +2,7 @@ module MML.Eval (eval, macroError) where
 
 import qualified Data.Map as M
 import Control.Monad
-import Control.Exception (catch, SomeException)
+import Control.Exception (catch, SomeException, displayException)
 import System.Exit
 
 import MML.Types
@@ -27,7 +27,7 @@ runMacro :: (Ctx -> [Exp] -> IO [Exp]) -> Ctx -> String -> [Exp] -> IO [Exp]
 runMacro evalFun ctx@(Ctx _ params funs) name c
         | M.member name funs = do
             let call = (funs M.! name) ctx evalFun c
-            let hdlr m = (macroError ctx) . show $ (m::SomeException)
+            let hdlr m = (macroError ctx) $ displayException (m::SomeException)
             catch call hdlr
         | otherwise = error ("no such macro '" ++ name ++ "'")
 
