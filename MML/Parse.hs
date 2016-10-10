@@ -47,7 +47,7 @@ doc = do
 exp :: Parser Exp
 exp =
     (do { r <- str; optional (do { string "~"; whitespaces}); return r })
-    <|> (do { r <- (tag <|> meta); whitespaces; return r})
+    <|> (do { r <- (tag <|> call); whitespaces; return r})
 
 exps :: Parser [Exp]
 exps = do
@@ -78,8 +78,8 @@ traceback macroname = do
     let col = sourceColumn sp
     return $ (TracebackRecord name line col macroname)
 
-meta :: Parser Exp
-meta = do
+call :: Parser Exp
+call = do
     string "{"
     whitespaces
     x <- exp
