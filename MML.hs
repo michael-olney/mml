@@ -28,7 +28,6 @@ Syntax TODO:
 Other TODO:
 1) Make all symbol imports explicit (whitelist)
 2) Allow macros to be defined by external executables
-3) Improve traceback for failed macros
-4) Build macros for building new macros - ensure this is modular!
-5) Dependency analysis
+3) Build macros for building new macros - ensure this is modular!
+4) Dependency analysis
 -}
