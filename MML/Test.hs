@@ -90,9 +90,9 @@ roundtrip6 = roundTripTest [
         Tag " a\\" [(">", [Str " <\\ "])]
         (Just [Str "b ", Tag "\\c " [] Nothing, Str " d "])
     ]
-{-roundtrip7 = roundTripTest [
-        Call " a\\" [Str "b ", Tag "\\c " [] Nothing, Str " d "]
-    ]-}
+roundtrip7 = roundTripTest [
+        Call emptyTBR " a\\" [Str "b ", Tag "\\c " [] Nothing, Str " d "]
+    ]
 roundtrip8 = roundTripTest [Str " "]
 roundtrip9 = roundTripTest [Str ""]
 

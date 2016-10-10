@@ -7,6 +7,8 @@ type Doc = [Exp]
 data TracebackRecord = TracebackRecord String Int Int String
     deriving (Show, Eq)
 
+emptyTBR = TracebackRecord "" 0 0 ""
+
 type Traceback = [TracebackRecord]
 
 data Exp =
@@ -34,5 +36,8 @@ type MacroFunsAux a = M.Map String (MacroFunAux a)
 type Params = M.Map String [Exp]
 
 data Ctx = Ctx Traceback Params (MacroFunsAux Ctx)
+
 type MacroFun = MacroFunAux Ctx
 type MacroFuns = MacroFunsAux Ctx
+
+emptyCtx = Ctx [] M.empty M.empty
