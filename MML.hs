@@ -14,9 +14,8 @@ import MML.HTML
 
 {-
 Syntax TODO:
--1) Eliminate automatic string collapsing
-0) Make attrs insensitive to ordering (Data.Map or something like that)
-1) Do parsing of attribute keys with Str
+0) Add tests for evaluation, traceback
+1) Make attrs insensitive to ordering (Data.Map or something like that)
 2) Change {} to <%>
 3) Introduce variables ==> <$> (pass env to macros, think about hygiene..)
 4) Change colon to another character
