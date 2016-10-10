@@ -40,7 +40,6 @@ convAttr :: (String, [Exp]) -> String
 convAttr (name, [Str val]) = name ++ "=\"" ++ (escape val) ++ "\""
 convAttr (name, []) = error "attribute values must not be empty"
 convAttr (name, xs@(_:_)) = error ("attribute values must resolve to single value: " ++ (show xs))
-convAttr _ = error "attribute values must resolve to strings"
 
 convAttrs :: [(String, [Exp])] -> String
 convAttrs = (intercalate " ") . (map convAttr)
@@ -60,7 +59,7 @@ convTag (Tag name as (Just cs)) =
     ++ "</" ++ name ++ ">"
 
 conv :: Exp -> String
-conv (Call _ _) = error "macro call encountered in MML.HTML"
+conv (Call {})                              = error "macro call encountered in MML.HTML"
 conv t@(Tag name _ _)   | isValidName name  = convTag t
                         | otherwise         =
                             error ("bad tag name: {" ++ name ++ "}")

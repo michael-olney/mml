@@ -28,7 +28,7 @@ main = do
             (Left err)  -> error $ "parse error: " ++ (show err)
             (Right doc) -> doc
             )
-    doc2 <- eval M.empty funs doc
+    doc2 <- eval (Ctx [] M.empty funs) doc
 
     (hPutStr oh) . toHTML $ doc2
     hPutStr oh "\n"
@@ -36,5 +36,3 @@ main = do
     hClose oh
     hClose ih
 
-    putStr . show $ doc
-    putStr "\n"

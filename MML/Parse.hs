@@ -9,7 +9,7 @@ import Text.ParserCombinators.Parsec.Prim hiding (parse)
 import Control.Monad
 import Data.List
 
-import qualified MML.Parsev0 as V0
+--import qualified MML.Parsev0 as V0
 
 import MML.Types
 import MML.Eval
@@ -67,6 +67,17 @@ attr = do
     string ">"
     return (name, val)
 
+sourcePos :: Parser SourcePos
+sourcePos = liftM statePos getParserState
+
+traceback :: String -> Parser TracebackRecord
+traceback macroname = do
+    sp <- sourcePos
+    let name = sourceName sp
+    let line = sourceLine sp
+    let col = sourceColumn sp
+    return $ (TracebackRecord name line col macroname)
+
 meta :: Parser Exp
 meta = do
     string "{"
@@ -75,10 +86,11 @@ meta = do
     name <- case x of
         (Str name) -> return name
         _ -> fail "name must be STRING value"    whitespaces
+    tb <- traceback name
     string ":"
     cs <- exps
     string "}"
-    return (Call name cs)
+    return (Call tb name cs)
 
 tag :: Parser Exp
 tag = do

@@ -20,6 +20,7 @@ import Vision.Image.Transform
 import System.IO
 import System.Directory
 import System.FilePath
+import System.Exit
 import Control.Monad
 import Control.Monad.Extra
 import Codec.Archive.Zip
@@ -38,7 +39,7 @@ inc ((Str fn):rest) = do
         (Left err)  -> error $ "parse error: " ++ (show err)
         (Right doc) -> return doc
         )
-    doc2 <- eval params funs doc
+    doc2 <- eval (Ctx [] params funs) doc
 
     hClose ih
     return doc2
@@ -58,9 +59,8 @@ subst params = auxList
                 in
                     [Tag name attrs2 ((liftM auxList) children)]
         aux e@(Str _) = [e]
-        aux (Call name cs) = [Call name (auxList cs)]
+        aux (Call tb name cs) = [Call tb name (auxList cs)]
         auxList = concatMap aux
-subst _ = error "wrong form for macro 'include'"
 
 convThumbChar '/' = '_'
 convThumbChar x = x
@@ -137,6 +137,7 @@ units = [
     ("KB", kilobyte)
     ]
 
+
 prettyfilesize :: [Exp] -> [Exp]
 prettyfilesize [(Str x)] =
     let
@@ -156,19 +157,19 @@ listpresskitshots (Tag "path" [] (Just [Str fn]):(Tag "suffix" [] (Just [Str suf
     return . (map Str) . (map aux) . filter (isSuffixOf suffix) $ xs
 listpresskitshots _ = error "bad usage of macro listpresskitshots"
 
-substlist :: ([Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
-substlist evalFun ((Tag "list" [] (Just xs)):(Tag "bind" [] (Just vnexps)):(Tag "targ" [] (Just targ)):[]) =
+substlist :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
+substlist ctx evalFun ((Tag "list" [] (Just xs)):(Tag "bind" [] (Just vnexps)):(Tag "targ" [] (Just targ)):[]) =
     let
         aux varname item = do
             let x = (subst (M.fromList [(varname, [item])]) targ)
-            evalFun x
+            evalFun ctx x
     in do
-        varnameExps <- evalFun vnexps
+        varnameExps <- evalFun ctx vnexps
         (case varnameExps of
-            [Str varname] -> (evalFun xs) >>= concatMapM (aux varname)
+            [Str varname] -> (evalFun ctx xs) >>= concatMapM (aux varname)
             e -> error ("bad varname in substlist:" ++ (show e))
             )
-substlist _ e = error ("bad usage of macro substlist:" ++ (show e))
+substlist _ _ e = error ("bad usage of macro substlist:" ++ (show e))
 
 dropPath :: Int -> FilePath -> FilePath
 dropPath n = joinPath . (drop n) . splitPath
@@ -185,7 +186,7 @@ createzip ((Tag "outfilename" [] (Just [Str outfn])):(Tag "filenames" [] (Just f
     putStr ("Creating " ++ outfn ++ "..\n")
     let (pathtrim::Int) = read pathtrimstr
     let options = [OptRecursive, OptLocation "" True]
-    archive <- addFilesToArchive options emptyArchive(map unwrap1Str fs) 
+    archive <- addFilesToArchive options emptyArchive (map unwrap1Str fs) 
     let fia = filesInArchive archive
     let es = map (unwrapJust . (\fn -> findEntryByPath fn archive)) fia
     let es2 = map (withEntryPath (dropPath pathtrim)) es
@@ -199,8 +200,15 @@ createzip ((Tag "outfilename" [] (Just [Str outfn])):(Tag "filenames" [] (Just f
     return []
 createzip e = error ("bad usage of macro createzip: " ++ (show e))
 
-strictIO f g c = (g c) >>= f
-strict f g c = (g c) >>= return . f
+concatMacro :: [Exp] -> IO [Exp]
+concatMacro xs  | allStrings    = return . (:[]) . Str . concat $ bareStrings
+                | otherwise     = error "concat called on LIST with non-STRING element"
+    where
+        allStrings  = (foldr (&&) True) . (map isStr) $ xs
+        bareStrings = map unwrap1Str xs
+
+strictIO f ctx eval xs = (eval ctx xs) >>= f
+strict f ctx eval xs = (eval ctx xs) >>= return . f
 
 funs :: MacroFuns
 funs = M.fromList [
@@ -211,6 +219,7 @@ funs = M.fromList [
     ("listpresskitshots", strictIO listpresskitshots),
     ("substlist", substlist),
     ("createzip", strictIO createzip),
-    ("inc", strictIO inc)
+    ("inc", strictIO inc),
+    ("concat", strictIO concatMacro)
     ]
 

@@ -90,9 +90,9 @@ roundtrip6 = roundTripTest [
         Tag " a\\" [(">", [Str " <\\ "])]
         (Just [Str "b ", Tag "\\c " [] Nothing, Str " d "])
     ]
-roundtrip7 = roundTripTest [
+{-roundtrip7 = roundTripTest [
         Call " a\\" [Str "b ", Tag "\\c " [] Nothing, Str " d "]
-    ]
+    ]-}
 roundtrip8 = roundTripTest [Str " "]
 roundtrip9 = roundTripTest [Str ""]
 
@@ -135,7 +135,7 @@ tests = TestList [
     TestLabel "roundtrip4" roundtrip4,
     TestLabel "roundtrip5" roundtrip5,
     TestLabel "roundtrip6" roundtrip6,
-    TestLabel "roundtrip7" roundtrip7,
+    --TestLabel "roundtrip7" roundtrip7,
     TestLabel "roundtrip8" roundtrip8,
     TestLabel "roundtrip9" roundtrip9,
     TestLabel "stringsep0" stringsep0,

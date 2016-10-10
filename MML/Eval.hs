@@ -1,63 +1,56 @@
-module MML.Eval (eval) where
+module MML.Eval (eval, macroError) where
 
 import qualified Data.Map as M
 import Control.Monad
+import Control.Exception (catch, SomeException)
+import System.Exit
 
 import MML.Types
 
-runMacro :: ([Exp] -> IO [Exp]) -> MacroFuns -> String -> [Exp] -> IO [Exp]
-runMacro evalFun funs name c
-                        | M.member name funs = (funs M.! name) evalFun c
-                        | otherwise = error ("no such macro '" ++ name ++ "'")
+tbToStr :: String -> Traceback -> String
+tbToStr msg ((TracebackRecord name line col macroname):xs) =
+    "Macro error: "
+    ++ name ++ ":"
+    ++ (show line) ++ ":"
+    ++ (show col) ++ ":"
+    ++ macroname ++ ":\n"
+    ++ (tbToStr msg xs)
+tbToStr msg [] = msg ++ "\n"
 
-runExps params funs xs =
+macroError :: Ctx -> String -> IO a
+macroError (Ctx tb _ _) msg = do
+    putStr . (tbToStr msg) $ tb
+    putStr "\n"
+    exitWith . ExitFailure $ 1
+
+runMacro :: (Ctx -> [Exp] -> IO [Exp]) -> Ctx -> String -> [Exp] -> IO [Exp]
+runMacro evalFun ctx@(Ctx _ params funs) name c
+        | M.member name funs = do
+            let call = (funs M.! name) ctx evalFun c
+            let hdlr m = (macroError ctx) . show $ (m::SomeException)
+            catch call hdlr
+        | otherwise = error ("no such macro '" ++ name ++ "'")
+
+runExps ctx xs =
     do
-        ys <- mapM (runExp params funs) (collapse xs)
-        return . collapse . concat $ ys
+        ys <- mapM (runExp ctx) xs
+        return . concat $ ys
 
-runOptExps params funs Nothing     = return Nothing
-runOptExps params funs (Just cs)   =
-    (runExps params funs cs) >>= return . Just
+runOptExps ctx Nothing      = return Nothing
+runOptExps ctx (Just cs)    = (runExps ctx cs) >>= return . Just
 
-runExp :: Params -> MacroFuns -> Exp -> IO [Exp]
-runExp params funs (Call name cs) =
-    runMacro (runExps params funs) funs name cs
-runExp params funs (Tag name as cs)
-    | M.member name params = return (params M.! name)
-    | otherwise = do
-        cs' <- runOptExps params funs cs
+runExp :: Ctx -> Exp -> IO [Exp]
+runExp (Ctx ctxtb params funs) (Call calltb name cs)  =
+    runMacro runExps newCtx name cs
+    where newCtx = (Ctx (calltb:ctxtb) params funs)
+runExp ctx@(Ctx tb params funs) (Tag name as cs)
+    | M.member name params                          = return (params M.! name)
+    | otherwise                                     = do
+        cs' <- runOptExps ctx cs
         let (ks, vs) = unzip as
-        vs'<- mapM (runExps params funs) vs
+        vs'<- mapM (runExps ctx) vs
         return [Tag name (zip ks vs') cs']
-runExp params funs c@(Str _) = return [c]
+runExp ctx c@(Str _)                                = return [c]
 
-collapse :: [Exp] -> [Exp]
-collapse xs =
-    let
-        aux e@(Str _) = [e]
-        aux (Tag name attrs children) =
-            let
-                children2 = (liftM auxList) . (liftM join2) $ children
-                (keys, vals) = unzip attrs
-                vals2 = map (auxList . join2) vals
-                attrs2 = zip keys vals2
-            in
-                [Tag name attrs2 children2]
-        aux (Call name children) =
-            let
-                children2 = auxList . join2 $ children
-            in
-                [Call name children2]
-        auxList = concatMap aux
-        join2 (x:y:xs)      | isStr x && isStr y
-                            = join2 ((Str ((unwrap1Str x) ++ (unwrap1Str y))):xs)
-                            | otherwise
-                            = x:(join2 (y:xs))
-        join2 [x]           = [x]
-        join2 []            = []
-    in
-        auxList xs
-
-eval :: Params -> MacroFuns -> Doc -> IO Doc
-eval params funs cs
-    = (runExps params funs cs) >>= return . collapse
+eval :: Ctx -> Doc -> IO Doc
+eval ctx cs = runExps ctx cs

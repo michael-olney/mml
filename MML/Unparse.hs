@@ -22,7 +22,7 @@ unparseExp (Tag name attrs children) =
     <> unparseAttrs attrs
     <> unparseChildren children
     <> text ">"
-unparseExp (Call name children) =
+unparseExp (Call _ name children) =
     text "{"
     <> unparseStr name
     <> unparseChildren (Just children)
