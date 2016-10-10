@@ -23,7 +23,7 @@ main = do
     oh <- openBinaryFile outFile WriteMode
 
     inp <- hGetContents ih
-    r <- parse M.empty funs fn inp
+    r <- parse fn inp
     let doc = (case r of
             (Left err)  -> error $ "parse error: " ++ err
             (Right doc) -> doc

@@ -7,28 +7,33 @@ import Test.HUnit
 import System.Exit
 
 parseEqTest str v = TestCase (do
-        r <- parse M.empty M.empty "<unknown>" str
+        r <- parse "<unknown>" str
         (case r of 
             (Left _)    -> assertBool "parser should accept this" False
             (Right doc) -> assertEqual "" v doc
             )        
         )
 parseRejectTest str = TestCase (do
-        r <- parse M.empty M.empty "<unknown>" str
+        r <- parse "<unknown>" str
         (case r of
             (Right _)   -> assertBool "parser should reject this" False
             _           -> return ()
             )
         )
 
-roundTripTest e = TestCase (do
+roundTripTestFun e eq = TestCase (do
         let txt = unparse e
-        r <- parse M.empty M.empty "<unknown>" txt
+        r <- parse "<unknown>" txt
         (case r of
-            (Right e2)   -> assertEqual "round trip test" e e2
+            (Right e2)   -> do
+                let msg = "round trip failed. expected:\n"
+                        ++ (show e) ++ "\ngot:\n" ++ (show e2)
+                assertBool msg (eq e e2)
             _            -> assertBool ("roundtrip rejection: " ++ txt) False
             )
         )
+
+roundTripTest e = roundTripTestFun e (==)
 
 basic0 = parseEqTest "<a>" ([Tag (Str "a") [] Nothing])
 basic1 = parseEqTest "<a<x:y>>" ([Tag (Str "a") [(Str "x", [Str "y"])] Nothing])
@@ -52,6 +57,9 @@ basic7 = parseEqTest "<(--a<--b):\\>><\\ :\\>>:a\\<b\\>c>" ([
     Tag (Str "(--a") [(Str "--b)", [Str ">"]), (Str " ", [Str ">"])] (Just [
         Str "a<b>c"
     ])])
+basic8 = parseEqTest "<$a>" [Var "a"]
+basic9 = parseEqTest "<$%>" [Var ""]
+basic10 = parseEqTest "<$testing>" [Var "testing"]
 
 reject0 = parseRejectTest "<"
 reject1 = parseRejectTest ">"
@@ -90,11 +98,14 @@ roundtrip6 = roundTripTest [
         Tag (Str " a\\") [(Str ">", [Str " <\\ "])]
         (Just [Str "b ", Tag (Str "\\c ") [] Nothing, Str " d "])
     ]
-roundtrip7 = roundTripTest [
+roundtrip7 = roundTripTest[
         Call emptyTBR (Str " a\\") [Str "b ", Tag (Str "\\c ") [] Nothing, Str " d "]
     ]
 roundtrip8 = roundTripTest [Str " "]
 roundtrip9 = roundTripTest [Str ""]
+roundtrip10 = roundTripTest [Var ""]
+roundtrip11 = roundTripTest [Var "testing"]
+roundtrip12 = roundTripTest [Var "\\ "]
 
 stringsep0 = parseEqTest " a ~ b " ([Str "a", Str "b"])
 stringsep1 = parseRejectTest " a ~~ b "
@@ -109,6 +120,9 @@ tests = TestList [
     TestLabel "basic5" basic5,
     TestLabel "basic6" basic6,
     TestLabel "basic7" basic7,
+    TestLabel "basic8" basic8,
+    TestLabel "basic9" basic9,
+    TestLabel "basic10" basic10,
     TestLabel "reject0" reject0,
     TestLabel "reject1" reject1,
     TestLabel "reject2" reject3,
@@ -138,6 +152,9 @@ tests = TestList [
     --TestLabel "roundtrip7" roundtrip7,
     TestLabel "roundtrip8" roundtrip8,
     TestLabel "roundtrip9" roundtrip9,
+    TestLabel "roundtrip10" roundtrip10,
+    TestLabel "roundtrip11" roundtrip11,
+    TestLabel "roundtrip12" roundtrip12,
     TestLabel "stringsep0" stringsep0,
     TestLabel "stringsep1" stringsep1,
     TestLabel "stringsep2" stringsep2

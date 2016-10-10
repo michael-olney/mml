@@ -32,15 +32,15 @@ convParam _                             = error "wrong form for parameter"
 
 inc :: [Exp] -> IO [Exp]
 inc ((Str fn):rest) = do
-    let params = M.fromList . (map convParam) $ rest
+    let bindings = M.fromList . (map convParam) $ rest
     ih <- openBinaryFile fn ReadMode
     inp <- hGetContents ih
-    r <- parse params funs ("include: " ++ fn) inp
+    r <- parse ("include: " ++ fn) inp
     doc <- (case r of
         (Left err)  -> error $ "parse error: " ++ err
         (Right doc) -> return doc
         )
-    doc2 <- eval (Ctx [] params funs) doc
+    doc2 <- eval (Ctx [] bindings funs) doc
 
     hClose ih
     return doc2
@@ -48,17 +48,19 @@ inc _ = error "wrong form for macro 'inc'"
 
 -- XXX split into three ops
 
-subst :: Params -> [Exp] -> [Exp]
-subst params = auxList
+subst :: Ctx -> [Exp] -> [Exp]
+subst ctx@(Ctx tb env funs) = auxList
     where
-        aux (Tag (Str name) attrs children)
-            | M.member name params  = params M.! name
-            | otherwise             =
+        aux (Var name)
+            | M.member name env     = env M.! name
+            | otherwise             = error $ "unbound variable: " ++ name
+        aux (Tag name attrs children) =
                 let
                     (keys, vals) = unzip attrs
                     attrs2 = zip keys (map auxList vals)
+                    [name2] = aux name
                 in
-                    [Tag (Str name) attrs2 ((liftM auxList) children)]
+                    [Tag name2 attrs2 ((liftM auxList) children)]
         aux e@(Tag _ _ _ )          = [e]
         aux e@(Str _) = [e]
         aux (Call tb name cs) = [Call tb name (auxList cs)]
@@ -159,11 +161,15 @@ listpresskitshots (Tag (Str "path") [] (Just [Str fn]):(Tag (Str "suffix") [] (J
     return . (map Str) . (map aux) . filter (isSuffixOf suffix) $ xs
 listpresskitshots _ = error "bad usage of macro listpresskitshots"
 
+nestEnv :: Env -> Env -> Env
+nestEnv outer inner = M.union inner outer
+
 substlist :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
-substlist ctx evalFun ((Tag (Str "list") [] (Just xs)):(Tag (Str "bind") [] (Just vnexps)):(Tag (Str "targ") [] (Just targ)):[]) =
+substlist ctx@(Ctx tb env funs) evalFun ((Tag (Str "list") [] (Just xs)):(Tag (Str "bind") [] (Just vnexps)):(Tag (Str "targ") [] (Just targ)):[]) =
     let
         aux varname item = do
-            let x = (subst (M.fromList [(varname, [item])]) targ)
+            let env' = nestEnv (M.fromList [(varname, [item])]) env
+            let x = (subst (Ctx tb env' funs)targ)
             evalFun ctx x
     in do
         varnameExps <- evalFun ctx vnexps
@@ -204,7 +210,7 @@ createzip e = error ("bad usage of macro createzip: " ++ (show e))
 
 concatMacro :: [Exp] -> IO [Exp]
 concatMacro xs  | allStrings    = return . (:[]) . Str . concat $ bareStrings
-                | otherwise     = error "concat called on LIST with non-STRING element"
+                | otherwise     = error $ "concat called on LIST with non-STRING element"
     where
         allStrings  = (foldr (&&) True) . (map isStr) $ xs
         bareStrings = map unwrap1Str xs

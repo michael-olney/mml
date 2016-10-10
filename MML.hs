@@ -14,13 +14,12 @@ import MML.HTML
 
 {-
 Syntax TODO:
--1) Escape names
+-1) Figure out how to test macro calls -- generics?
 0) Add tests for evaluation, traceback
 1) Make attrs insensitive to ordering (Data.Map or something like that)
 2) Turn strings in Exp to Exp's..
 3) Make attributes more distinct from tags
 4) Add traceback to Tags in Exp
-3) Introduce variables ==> <$> (pass env to macros, think about hygiene..)
 4) Change colon to another character
 5) Add version specifier to head!
 6) Introduce code escaping mode

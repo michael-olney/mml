@@ -15,6 +15,7 @@ data Exp =
     Tag Exp [(Exp, [Exp])] (Maybe [Exp])
     | Str String
     | Call TracebackRecord Exp [Exp]
+    | Var String
     deriving (Show, Eq, Ord)
 
 isStr :: Exp -> Bool
@@ -33,9 +34,9 @@ unwrapStr _ = error "tried to unwrap non-str"
 type MacroFunAux a = a -> (a -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
 type MacroFunsAux a = M.Map String (MacroFunAux a)
 
-type Params = M.Map String [Exp]
+type Env = M.Map String [Exp]
 
-data Ctx = Ctx Traceback Params (MacroFunsAux Ctx)
+data Ctx = Ctx Traceback Env (MacroFunsAux Ctx)
 
 type MacroFun = MacroFunAux Ctx
 type MacroFuns = MacroFunsAux Ctx

@@ -14,8 +14,8 @@ import Data.List
 import MML.Types
 import MML.Eval
 
-parse :: Params -> MacroFuns -> String -> String -> IO (Either String Doc)
-parse params funs name mml = let
+parse :: String -> String -> IO (Either String Doc)
+parse name mml = let
     r = P.parse doc name mml
     in
         (case r of
@@ -23,7 +23,7 @@ parse params funs name mml = let
             (Right x)   -> return . Right $ x
             )
 
-special = "<>{}:\\~%"
+special = "<>{}:\\~%$"
 whitespace = " \x0d\x0a\t"
 
 escapable s = do
@@ -47,7 +47,7 @@ doc = do
 exp :: Parser Exp
 exp =
     (do { r <- str; optional (do { string "~"; whitespaces}); return r })
-    <|> (do { r <- (call <|> tag); whitespaces; return r})
+    <|> (do { r <- (call <|> var <|> tag); whitespaces; return r})
 
 exps :: Parser [Exp]
 exps = do
@@ -74,6 +74,18 @@ traceback macroname = do
     let line = sourceLine sp
     let col = sourceColumn sp
     return $ (TracebackRecord name line col macroname)
+
+var :: Parser Exp
+var = do
+    try $ string  "<$"
+    whitespaces
+    x <- exp
+    name <- (case x of
+            (Str name)  -> return name
+            _           -> fail "variable name must be STRING"
+            )
+    string ">"
+    return (Var name)
 
 call :: Parser Exp
 call = do

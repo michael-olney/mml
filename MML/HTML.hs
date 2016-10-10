@@ -64,7 +64,8 @@ convTag name as (Just cs) =
     ++ "</" ++ name ++ ">"
 
 conv :: Exp -> String
-conv (Call {})                              = error "macro call encountered in MML.HTML"
+conv (Var {})                               = error "unevaluated variable encountered in MML.HTML"
+conv (Call {})                              = error "unevaluated macro call encountered in MML.HTML"
 conv t@(Tag (Str name) as children)
                         | isValidName name  = convTag name as children
                         | otherwise         = error $ "bad tag name: " ++ name

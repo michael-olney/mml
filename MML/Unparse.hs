@@ -15,6 +15,10 @@ unparse xs = fullRender LeftMode 1 1 aux2 "" (unparseExps xs)
         aux2 (PP.Str s) x = s ++ x
 
 unparseExp :: Exp -> PP.Doc
+unparseExp (Var xs) =
+    text "<$"
+    <> unparseStr xs
+    <> text ">"
 unparseExp (Str xs) = unparseStr xs
 unparseExp (Tag name attrs children) =
     text "<"
@@ -23,10 +27,10 @@ unparseExp (Tag name attrs children) =
     <> unparseChildren children
     <> text ">"
 unparseExp (Call _ name children) =
-    text "{"
+    text "<%"
     <> unparseExp name
     <> unparseChildren (Just children)
-    <> text "}"
+    <> text ">"
 
 unparsePseudoExp :: Either PseudoExp Exp -> PP.Doc
 unparsePseudoExp (Left StrSep)  = text "~"
@@ -62,7 +66,7 @@ unparseAttr (name, es) =
     <> unparseExps es
     <> text ">"
 
-special = "<>{}:\\~%"
+special = "<>{}:\\~%$"
 whitespace = " \x0d\x0a\t"
 escaped = special ++ whitespace
 
