@@ -18,13 +18,13 @@ unparseExp :: Exp -> PP.Doc
 unparseExp (Str xs) = unparseStr xs
 unparseExp (Tag name attrs children) =
     text "<"
-    <> unparseStr name
+    <> unparseExp name
     <> unparseAttrs attrs
     <> unparseChildren children
     <> text ">"
 unparseExp (Call _ name children) =
     text "{"
-    <> unparseStr name
+    <> unparseExp name
     <> unparseChildren (Just children)
     <> text "}"
 
@@ -51,13 +51,13 @@ unparseChildren :: Maybe [Exp] -> PP.Doc
 unparseChildren Nothing     = empty
 unparseChildren (Just xs)   = text ":" <> unparseExps xs
 
-unparseAttrs :: [(String, [Exp])] -> PP.Doc
+unparseAttrs :: [(Exp, [Exp])] -> PP.Doc
 unparseAttrs = (foldr (<>) empty) . (map unparseAttr)
 
-unparseAttr :: (String, [Exp]) -> PP.Doc
+unparseAttr :: (Exp, [Exp]) -> PP.Doc
 unparseAttr (name, es) =
     text "<"
-    <> unparseStr name
+    <> unparseExp name
     <> text ":"
     <> unparseExps es
     <> text ">"

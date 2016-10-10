@@ -39,17 +39,26 @@ runExps ctx xs =
 runOptExps ctx Nothing      = return Nothing
 runOptExps ctx (Just cs)    = (runExps ctx cs) >>= return . Just
 
-runExp :: Ctx -> Exp -> IO [Exp]
-runExp (Ctx ctxtb params funs) (Call calltb name cs)  =
-    runMacro runExps newCtx name cs
-    where newCtx = (Ctx (calltb:ctxtb) params funs)
-runExp ctx@(Ctx tb params funs) (Tag name as cs)
+runTagExp :: Ctx -> String -> [(Exp, [Exp])] -> Maybe [Exp] -> IO [Exp]
+runTagExp ctx@(Ctx tb params funs) name as cs
     | M.member name params                          = return (params M.! name)
     | otherwise                                     = do
         cs' <- runOptExps ctx cs
         let (ks, vs) = unzip as
         vs'<- mapM (runExps ctx) vs
-        return [Tag name (zip ks vs') cs']
+        return [Tag (Str name) (zip ks vs') cs']
+
+runExp :: Ctx -> Exp -> IO [Exp]
+runExp ctx@(Ctx ctxtb params funs) (Call calltb nameexp cs)  = do
+    let newCtx = (Ctx (calltb:ctxtb) params funs)
+    name <- (case nameexp of
+            (Str name)  -> return name
+            _           -> macroError ctx "macro name must be STRING"
+            )
+    runMacro runExps newCtx name cs
+runExp ctx (Tag (Str name) as cs)   = runTagExp ctx name as cs
+runExp ctx (Tag _ as cs)            =
+    macroError ctx "tag name must be STRING by the time the tag is evaluated"
 runExp ctx c@(Str _)                                = return [c]
 
 eval :: Ctx -> Doc -> IO Doc

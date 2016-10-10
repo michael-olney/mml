@@ -26,8 +26,9 @@ import Control.Monad.Extra
 import Codec.Archive.Zip
 import Data.ByteString.Lazy as B (writeFile)
 
-convParam (Tag name [] (Just v)) = (name, v)
-convParam _ = error "wrong form for parameter"
+convParam (Tag (Str name) [] (Just v))  = (name, v)
+convParam (Tag _ [] _)                  = error "shouldn't see this"
+convParam _                             = error "wrong form for parameter"
 
 inc :: [Exp] -> IO [Exp]
 inc ((Str fn):rest) = do
@@ -50,14 +51,15 @@ inc _ = error "wrong form for macro 'inc'"
 subst :: Params -> [Exp] -> [Exp]
 subst params = auxList
     where
-        aux (Tag name attrs children)
+        aux (Tag (Str name) attrs children)
             | M.member name params  = params M.! name
             | otherwise             =
                 let
                     (keys, vals) = unzip attrs
                     attrs2 = zip keys (map auxList vals)
                 in
-                    [Tag name attrs2 ((liftM auxList) children)]
+                    [Tag (Str name) attrs2 ((liftM auxList) children)]
+        aux e@(Tag _ _ _ )          = [e]
         aux e@(Str _) = [e]
         aux (Call tb name cs) = [Call tb name (auxList cs)]
         auxList = concatMap aux
@@ -74,9 +76,9 @@ resizeJuicy (ImageRGBA8 img) w h =
 resizeJuicy _ w h = error "unsupported pixel format"
 
 resizesingle :: Exp -> IO Exp
-resizesingle e@(Tag "img" as Nothing) = do
+resizesingle e@(Tag (Str "img") as Nothing) = do
     let asm = M.fromList as
-    let attr = unwrapStr . (asm M.!)
+    let attr = unwrapStr . (asm M.!) . Str
     let src = attr $ "src"
     let w::Int = read . attr $ "width"
     let h::Int = read . attr $ "height"
@@ -87,13 +89,13 @@ resizesingle e@(Tag "img" as Nothing) = do
     savePngImage thumbdst resized
     putStr "OK\n"
 
-    let asm2 = (M.insert "src" [Str thumbdst]) . (M.delete "width") . (M.delete "height") $ asm
+    let asm2 = (M.insert (Str "src") [Str thumbdst]) . (M.delete (Str "width")) . (M.delete (Str "height")) $ asm
 
-    return (Tag "img" (M.toList asm2) Nothing)
-resizesingle e@(Tag "img" as (Just xs)) = do
+    return (Tag (Str "img") (M.toList asm2) Nothing)
+resizesingle e@(Tag (Str "img") as (Just xs)) = do
     ys <- resizeimgs xs
-    (Tag "img" as2 Nothing) <- resizesingle (Tag "img" as Nothing)
-    return (Tag "img" as2 (Just ys))
+    (Tag (Str "img") as2 Nothing) <- resizesingle (Tag (Str "img") as Nothing)
+    return (Tag (Str "img") as2 (Just ys))
 resizesingle e@(Tag name as Nothing) = return e
 resizesingle (Tag name as (Just x)) = do
     y <- resizeimgs x
@@ -111,14 +113,14 @@ filesize [(Str fn)] = do
     return . (:[]) . Str . show $ sz
 filesize e = error ("bad usage for macro 'filesize'" ++ (show e))
 
-linksingle e@(Tag "img" as (Just [Tag "img" as2 Nothing])) =
+linksingle e@(Tag (Str "img") as (Just [Tag (Str "img") as2 Nothing])) =
     let
-        src = unwrapStr ((M.fromList as2) M.! "src")
+        src = unwrapStr ((M.fromList as2) M.! (Str "src"))
     in
-        Tag "a" [("href", [Str ("javascript:showImage('" ++ src ++ "');")])] (
-            Just [Tag "img" as Nothing])
-linksingle e@(Tag "img" as x) =
-    linksingle (Tag "img" as (Just [Tag "img" as Nothing]))
+        Tag (Str "a") [(Str "href", [Str ("javascript:showImage('" ++ src ++ "');")])] (
+            Just [Tag (Str "img") as Nothing])
+linksingle e@(Tag (Str "img") as x) =
+    linksingle (Tag (Str "img") as (Just [Tag (Str "img") as Nothing]))
 linksingle (Tag name as (Just x)) = Tag name as (Just (linkimgs x))
 linksingle e = e
 
@@ -151,14 +153,14 @@ prettyfilesize [(Str x)] =
 prettyfilesize _ = error "bad usage of macro prettyfilesize"
 
 listpresskitshots :: [Exp] -> IO [Exp]
-listpresskitshots (Tag "path" [] (Just [Str fn]):(Tag "suffix" [] (Just [Str suffix])):[]) = do
+listpresskitshots (Tag (Str "path") [] (Just [Str fn]):(Tag (Str "suffix") [] (Just [Str suffix])):[]) = do
     xs <- getDirectoryContents fn
     let aux x = take ((length x) - (length suffix)) x
     return . (map Str) . (map aux) . filter (isSuffixOf suffix) $ xs
 listpresskitshots _ = error "bad usage of macro listpresskitshots"
 
 substlist :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
-substlist ctx evalFun ((Tag "list" [] (Just xs)):(Tag "bind" [] (Just vnexps)):(Tag "targ" [] (Just targ)):[]) =
+substlist ctx evalFun ((Tag (Str "list") [] (Just xs)):(Tag (Str "bind") [] (Just vnexps)):(Tag (Str "targ") [] (Just targ)):[]) =
     let
         aux varname item = do
             let x = (subst (M.fromList [(varname, [item])]) targ)
@@ -182,7 +184,7 @@ unwrapJust Nothing = error "unwrap Just failed"
 unwrapJust (Just x) = x
 
 createzip :: [Exp] -> IO [Exp]
-createzip ((Tag "outfilename" [] (Just [Str outfn])):(Tag "filenames" [] (Just fs)):(Tag "pathtrim" [] (Just [Str pathtrimstr])):(Tag "outbase" [] (Just [Str outbase])):[]) = do
+createzip ((Tag (Str "outfilename") [] (Just [Str outfn])):(Tag (Str "filenames") [] (Just fs)):(Tag (Str "pathtrim") [] (Just [Str pathtrimstr])):(Tag (Str "outbase") [] (Just [Str outbase])):[]) = do
     putStr ("Creating " ++ outfn ++ "..\n")
     let (pathtrim::Int) = read pathtrimstr
     let options = [OptRecursive, OptLocation "" True]

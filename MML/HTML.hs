@@ -36,32 +36,39 @@ isValidName (c:cs) = (start c) && (aux cs)
 convExps :: [Exp] -> String
 convExps = foldl (\s c -> s ++ (conv c)) ""
 
-convAttr :: (String, [Exp]) -> String
-convAttr (name, [Str val]) = name ++ "=\"" ++ (escape val) ++ "\""
-convAttr (name, []) = error "attribute values must not be empty"
-convAttr (name, xs@(_:_)) = error ("attribute values must resolve to single value: " ++ (show xs))
+-- TODO escape names..
+convAttrAux :: String -> [Exp] -> String
+convAttrAux name [Str val] = name ++ "=\"" ++ (escape val) ++ "\""
+convAttrAux name [] = error "attribute values must not be empty"
+convAttrAux name xs@(_:_) = error ("attribute values must resolve to single value: " ++ (show xs))
 
-convAttrs :: [(String, [Exp])] -> String
+convAttr :: (Exp, [Exp]) -> String
+convAttr ((Str name), xs) = convAttrAux name xs
+convAttr (_, xs) = error "attribute name must be STRING when converting to HTML"
+
+convAttrs :: [(Exp, [Exp])] -> String
 convAttrs = (intercalate " ") . (map convAttr)
 
-convTag :: Exp -> String
-convTag (Tag name [] Nothing) =
+convTag :: String -> [(Exp, [Exp])] -> Maybe [Exp] -> String
+convTag name [] Nothing = 
     "<" ++ name ++ "/>"
-convTag (Tag name as Nothing) =
+convTag name as Nothing = 
     "<" ++ name ++ " " ++ (convAttrs as) ++ "/>"
-convTag (Tag name [] (Just cs)) =
+convTag name [] (Just cs) = 
     "<" ++ name ++ ">"
     ++ (convExps cs)
     ++ "</" ++ name ++ ">"
-convTag (Tag name as (Just cs)) =
+convTag name as (Just cs) = 
     "<" ++ name ++ " " ++ (convAttrs as) ++ ">"
     ++ (convExps cs)
     ++ "</" ++ name ++ ">"
 
 conv :: Exp -> String
 conv (Call {})                              = error "macro call encountered in MML.HTML"
-conv t@(Tag name _ _)   | isValidName name  = convTag t
-                        | otherwise         =
-                            error ("bad tag name: {" ++ name ++ "}")
+conv t@(Tag (Str name) as children)
+                        | isValidName name  = convTag name as children
+                        | otherwise         = error $ "bad tag name: " ++ name
+conv t@(Tag _ _ _)                          =
+        error "tag name must be STRING when converting to HTML"
 conv (Str s) = escape s
 

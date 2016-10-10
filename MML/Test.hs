@@ -30,26 +30,26 @@ roundTripTest e = TestCase (do
             )
         )
 
-basic0 = parseEqTest "<a>" ([Tag "a" [] Nothing])
-basic1 = parseEqTest "<a<x:y>>" ([Tag "a" [("x", [Str "y"])] Nothing])
+basic0 = parseEqTest "<a>" ([Tag (Str "a") [] Nothing])
+basic1 = parseEqTest "<a<x:y>>" ([Tag (Str "a") [(Str "x", [Str "y"])] Nothing])
 basic2 = parseEqTest "<a<x:y><p:q>>" ([
-    Tag "a" [("x", [Str "y"]), ("p", [Str "q"])] Nothing])
+    Tag (Str "a") [(Str "x", [Str "y"]), (Str "p", [Str "q"])] Nothing])
 basic3 = parseEqTest "<a<x:y><p:q>:>" ([
-    Tag "a" [("x", [Str "y"]), ("p", [Str "q"])] (Just [])])
+    Tag (Str "a") [(Str "x", [Str "y"]), (Str "p", [Str "q"])] (Just [])])
 basic4 = parseEqTest "<a<x:y><p:q>:a>" ([
-    Tag "a" [("x", [Str "y"]), ("p", [Str "q"])] (Just [
+    Tag (Str "a") [(Str "x", [Str "y"]), (Str "p", [Str "q"])] (Just [
         Str "a"
     ])])
 basic5 = parseEqTest "<a<x:y><p:q>:a<b>>" ([
-    Tag "a" [("x", [Str "y"]), ("p", [Str "q"])] (Just [
-        Str "a", Tag "b" [] Nothing
+    Tag (Str "a") [(Str "x", [Str "y"]), (Str "p", [Str "q"])] (Just [
+        Str "a", Tag (Str "b") [] Nothing
     ])])
 basic6 = parseEqTest "<a<x:y><p:q>:a<b>c>" ([
-    Tag "a" [("x", [Str "y"]), ("p", [Str "q"])] (Just [
-        Str "a", Tag "b" [] Nothing, Str "c"
+    Tag (Str "a") [(Str "x", [Str "y"]), (Str "p", [Str "q"])] (Just [
+        Str "a", Tag (Str "b") [] Nothing, Str "c"
     ])])
 basic7 = parseEqTest "<(--a<--b):\\>><\\ :\\>>:a\\<b\\>c>" ([
-    Tag "(--a" [("--b)", [Str ">"]), (" ", [Str ">"])] (Just [
+    Tag (Str "(--a") [(Str "--b)", [Str ">"]), (Str " ", [Str ">"])] (Just [
         Str "a<b>c"
     ])])
 
@@ -70,28 +70,28 @@ space4 = parseEqTest "    a   b   " ([Str "a b"])
 space5 = parseEqTest "    a  \\ b   " ([Str "a  b"])
 space6 = parseEqTest "    a \\  b   " ([Str "a   b"])
 space7 = parseEqTest "    a \\ <x> b   " ([
-    Str "a  ", Tag "x" [] Nothing, Str "b"])
+    Str "a  ", Tag (Str "x") [] Nothing, Str "b"])
 space8 = parseEqTest "\\    a \\ <x> b   " ([
-    Str "  a  ", Tag "x" [] Nothing, Str "b"])
+    Str "  a  ", Tag (Str "x") [] Nothing, Str "b"])
 space9 = parseEqTest "\\ \\\\   a \\ <x> b   " ([
-    Str " \\ a  ", Tag "x" [] Nothing, Str "b"])
+    Str " \\ a  ", Tag (Str "x") [] Nothing, Str "b"])
 space10 = parseEqTest "a\\ " ([Str "a "])
 
-roundtrip0 = roundTripTest [Tag "a" [] Nothing]
-roundtrip1 = roundTripTest [Tag "a" [] (Just [Str "b"])]
-roundtrip2 = roundTripTest [Tag "a" [] (Just [Str "b", Str "c"])]
-roundtrip3 = roundTripTest [Tag "a" [] (Just [Str "b", Tag "c" [] Nothing, Str "d"])]
-roundtrip4 = roundTripTest [Tag "a" [] (Just [Str "b ", Tag "c" [] Nothing, Str " d "])]
+roundtrip0 = roundTripTest [Tag (Str "a") [] Nothing]
+roundtrip1 = roundTripTest [Tag (Str "a") [] (Just [Str "b"])]
+roundtrip2 = roundTripTest [Tag (Str "a") [] (Just [Str "b", Str "c"])]
+roundtrip3 = roundTripTest [Tag (Str "a") [] (Just [Str "b", Tag (Str "c") [] Nothing, Str "d"])]
+roundtrip4 = roundTripTest [Tag (Str "a") [] (Just [Str "b ", Tag (Str "c") [] Nothing, Str " d "])]
 roundtrip5 = roundTripTest [
-        Tag "a" [("x", [Str "y"])]
-        (Just [Str "b ", Tag "c" [] Nothing, Str " d "])
+        Tag (Str "a") [(Str "x", [Str "y"])]
+        (Just [Str "b ", Tag (Str "c") [] Nothing, Str " d "])
     ]
 roundtrip6 = roundTripTest [
-        Tag " a\\" [(">", [Str " <\\ "])]
-        (Just [Str "b ", Tag "\\c " [] Nothing, Str " d "])
+        Tag (Str " a\\") [(Str ">", [Str " <\\ "])]
+        (Just [Str "b ", Tag (Str "\\c ") [] Nothing, Str " d "])
     ]
 roundtrip7 = roundTripTest [
-        Call emptyTBR " a\\" [Str "b ", Tag "\\c " [] Nothing, Str " d "]
+        Call emptyTBR (Str " a\\") [Str "b ", Tag (Str "\\c ") [] Nothing, Str " d "]
     ]
 roundtrip8 = roundTripTest [Str " "]
 roundtrip9 = roundTripTest [Str ""]

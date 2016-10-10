@@ -54,14 +54,11 @@ exps = do
     whitespaces
     many (do { r <- exp; whitespaces; return r; })
 
-attr :: Parser (String, [Exp])
+attr :: Parser (Exp, [Exp])
 attr = do
     string "<"
     whitespaces
-    x <- exp
-    name <- case x of
-        (Str name) -> return name
-        _ -> fail "name must be STRING value"    whitespaces
+    name <- exp
     string ":"
     val <- exps
     string ">"
@@ -82,11 +79,11 @@ call :: Parser Exp
 call = do
     try $ string  "<%"
     whitespaces
-    x <- exp
-    name <- case x of
-        (Str name) -> return name
-        _ -> fail "name must be STRING value"    whitespaces
-    tb <- traceback name
+    name <- exp
+    tb <- (case name of
+            (Str name)  -> traceback name
+            _           -> traceback "<unknown macro>"
+            )
     string ":"
     cs <- exps
     string ">"
@@ -96,10 +93,7 @@ tag :: Parser Exp
 tag = do
     string "<"
     whitespaces
-    x <- exp
-    name <- case x of
-        (Str name) -> return name
-        _ -> fail "name must be STRING value"
+    name <- exp
     whitespaces
     attrs <- endBy attr whitespaces
     exp <- optionMaybe tagExps

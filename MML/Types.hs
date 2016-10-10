@@ -5,17 +5,17 @@ import qualified Data.Map as M
 type Doc = [Exp]
 
 data TracebackRecord = TracebackRecord String Int Int String
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 emptyTBR = TracebackRecord "" 0 0 ""
 
 type Traceback = [TracebackRecord]
 
 data Exp =
-    Tag String [(String, [Exp])] (Maybe [Exp])
+    Tag Exp [(Exp, [Exp])] (Maybe [Exp])
     | Str String
-    | Call TracebackRecord String [Exp]
-    deriving (Show, Eq)
+    | Call TracebackRecord Exp [Exp]
+    deriving (Show, Eq, Ord)
 
 isStr :: Exp -> Bool
 isStr (Str _) = True
