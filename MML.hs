@@ -14,6 +14,9 @@ import MML.HTML
 
 {-
 Syntax TODO:
+-4) Introduce tokenizing layer to parser
+-3) Add alternate form of < to preserve whitespace (for e.g. It was <em:you>!)
+-2) Introduce precedence of whitespace characters? (e.g. linefeed preserved over space..)
 -1) Figure out how to test macro calls -- generics?
 0) Add tests for evaluation, traceback
 1) Make attrs insensitive to ordering (Data.Map or something like that)
