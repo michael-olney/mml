@@ -1,6 +1,13 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, TupleSections #-}
 
-module MML.Parse (parse) where
+module MML.Parse (
+    parse, tokenize,
+    TokenPos, Token(..),
+    BraceVariant(..),
+    BraceDir(..),
+    BraceType(..),
+    SpaceType(..)
+    ) where
 
 import Prelude hiding (exp)
 import Text.ParserCombinators.Parsec hiding (parse)
@@ -23,7 +30,86 @@ parse name mml = let
             (Right x)   -> return . Right $ x
             )
 
-special = "<>{}:\\~%$"
+tokenize :: String -> String -> IO (Either String [Token])
+tokenize name mml = let
+    r = P.parse rawTokens name mml
+    in
+        (case r of
+            (Left err)      -> return . Left . show $ err
+            (Right xs)      -> return . Right . fst . unzip $ xs
+            )
+
+data BraceVariant = BVSpecialLike | BVCharLike
+    deriving (Show, Eq)
+data BraceDir = BDOpen | BDClose
+    deriving (Show, Eq)
+data BraceType = BTTag | BTCall | BTVar | BTUnknown
+    deriving (Show, Eq)
+data SpaceType = STBare | STEscaped
+    deriving (Show, Eq)
+
+data Token =
+    TChar Char
+    | TSpace (Maybe Char)
+    | TBrace BraceType BraceDir BraceVariant
+    | TEmptyStr
+    | TStrSep
+    | TSplit
+    | TEOF
+    deriving (Show, Eq)
+
+type TokenPos = (Token, SourcePos)
+
+brace str bt bd bv = do
+    pos <- getPosition
+    try $ string str
+    return . (, pos) $ TBrace bt bd bv
+
+single str con = do
+    pos <- getPosition
+    string str
+    return . (, pos) $ con
+
+rawToken :: Parser TokenPos
+rawToken = do
+    do
+        pos <- getPosition
+        oneOf whitespace
+        return . (, pos) $ TSpace Nothing
+    <|> brace "<%"  BTCall      BDOpen  BVSpecialLike
+    <|> brace "<$"  BTVar       BDOpen  BVSpecialLike
+    <|> brace "<"   BTTag       BDOpen  BVSpecialLike
+    <|> brace ">"   BTUnknown   BDClose BVSpecialLike
+    <|> brace "{%"  BTCall      BDOpen  BVCharLike
+    <|> brace "{$"  BTVar       BDOpen  BVCharLike
+    <|> brace "{"   BTTag       BDOpen  BVCharLike
+    <|> brace "}"   BTUnknown   BDClose BVCharLike
+    <|> single "^"  TEmptyStr
+    <|> single "~"  TStrSep
+    <|> single ":"  TSplit
+    <|> do
+        pos <- getPosition
+        x <- noneOf (whitespace ++ special)
+        return . (, pos) . TChar $ x
+    <|> try (do
+        pos <- getPosition
+        string "\\"
+        x <- noneOf whitespace
+        return . (, pos) . TChar $ x)
+    <|> try (do
+        pos <- getPosition
+        string "\\"
+        x <- oneOf whitespace
+        return . (, pos) . TSpace . Just $ x)
+
+rawTokens :: Parser [TokenPos]
+rawTokens = do
+    xs <- many rawToken
+    pos <- getPosition
+    eof
+    return . (++ [(TEOF, pos)]) $ xs
+
+special = "<>{}:\\~%$^"
 whitespace = " \x0d\x0a\t"
 
 escapable s = do
@@ -46,8 +132,14 @@ doc = do
 
 exp :: Parser Exp
 exp =
-    (do { r <- str; optional (do { string "~"; whitespaces}); return r })
-    <|> (do { r <- (call <|> var <|> tag); whitespaces; return r})
+    do
+        r <- str
+        optional (do { string "~"; whitespaces})
+        return r
+    <|> do
+        r <- (call <|> var <|> tag)
+        whitespaces
+        return r
 
 exps :: Parser [Exp]
 exps = do
@@ -142,11 +234,12 @@ gap = do
 
 str :: Parser Exp
 str =
-    (do
-        string "%"
+    do
+        string "^"
         whitespaces
-        return . Str $ "")
-    <|> (do
+        return . Str $ ""
+    <|> do
         xs <- many1 (word <|> gap)
         let ss = concat . (map dropEither) . rmTrailing . (map collapseSpaces) $ xs
-        return . Str $ ss)
+        return . Str $ ss
+

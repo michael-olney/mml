@@ -6,6 +6,14 @@ import qualified Data.Map as M
 import Test.HUnit
 import System.Exit
 
+tokenizeEqTest str v = TestCase (do
+        r <- tokenize "<unknown>" str
+        (case r of 
+            (Left _)    -> assertBool "tokenizer should accept this" False
+            (Right toks) -> assertEqual "" v toks
+            )        
+        )
+
 parseEqTest str v = TestCase (do
         r <- parse "<unknown>" str
         (case r of 
@@ -58,7 +66,7 @@ basic7 = parseEqTest "<(--a<--b):\\>><\\ :\\>>:a\\<b\\>c>" ([
         Str "a<b>c"
     ])])
 basic8 = parseEqTest "<$a>" [Var "a"]
-basic9 = parseEqTest "<$%>" [Var ""]
+basic9 = parseEqTest "<$^>" [Var ""]
 basic10 = parseEqTest "<$testing>" [Var "testing"]
 
 reject0 = parseRejectTest "<"
@@ -107,11 +115,90 @@ roundtrip10 = roundTripTest [Var ""]
 roundtrip11 = roundTripTest [Var "testing"]
 roundtrip12 = roundTripTest [Var "\\ "]
 
-stringsep0 = parseEqTest " a ~ b " ([Str "a", Str "b"])
+stringsep0 = parseEqTest " a ~ b " [Str "a", Str "b"]
 stringsep1 = parseRejectTest " a ~~ b "
 stringsep2 = parseRejectTest "~a"
 
+tokenize0 = tokenizeEqTest "  <%> " [
+        TSpace Nothing, TSpace Nothing,
+        TBrace BTCall BDOpen BVSpecialLike,
+        TBrace BTUnknown BDClose BVSpecialLike,
+        TSpace Nothing,
+        TEOF
+        ]
+tokenize1 = tokenizeEqTest " {%}> " [
+        TSpace Nothing,
+        TBrace BTCall BDOpen BVCharLike,
+        TBrace BTUnknown BDClose BVCharLike,
+        TBrace BTUnknown BDClose BVSpecialLike,
+        TSpace Nothing,
+        TEOF
+        ]
+tokenize2 = tokenizeEqTest " ^ " [
+        TSpace Nothing,
+        TEmptyStr,
+        TSpace Nothing,
+        TEOF
+        ]
+tokenize3 = tokenizeEqTest "{$}" [
+        TBrace BTVar BDOpen BVCharLike,
+        TBrace BTUnknown BDClose BVCharLike,
+        TEOF
+        ]
+tokenize4 = tokenizeEqTest "<$>" [
+        TBrace BTVar BDOpen BVSpecialLike,
+        TBrace BTUnknown BDClose BVSpecialLike,
+        TEOF
+        ]
+tokenize5 = tokenizeEqTest " ~ " [
+        TSpace Nothing,
+        TStrSep,
+        TSpace Nothing,
+        TEOF
+        ]
+tokenize6 = tokenizeEqTest " : " [
+        TSpace Nothing,
+        TSplit,
+        TSpace Nothing,
+        TEOF
+        ]
+tokenize7 = tokenizeEqTest "\\>" [
+        TChar '>',
+        TEOF
+        ]
+tokenize8 = tokenizeEqTest "\\\\" [
+        TChar '\\',
+        TEOF
+        ]
+tokenize9 = tokenizeEqTest " a b " [
+        TSpace Nothing,
+        TChar 'a',
+        TSpace Nothing,
+        TChar 'b',
+        TSpace Nothing,
+        TEOF
+        ]
+tokenize10 = tokenizeEqTest " a\\ b " [
+        TSpace Nothing,
+        TChar 'a',
+        TSpace (Just ' '),
+        TChar 'b',
+        TSpace Nothing,
+        TEOF
+        ]
+
 tests = TestList [
+    TestLabel "tokenize0" tokenize0,
+    TestLabel "tokenize1" tokenize1,
+    TestLabel "tokenize2" tokenize2,
+    TestLabel "tokenize3" tokenize3,
+    TestLabel "tokenize4" tokenize4,
+    TestLabel "tokenize5" tokenize5,
+    TestLabel "tokenize6" tokenize6,
+    TestLabel "tokenize7" tokenize7,
+    TestLabel "tokenize8" tokenize8,
+    TestLabel "tokenize9" tokenize9,
+    TestLabel "tokenize10" tokenize10,
     TestLabel "basic0" basic0,
     TestLabel "basic1" basic1 ,
     TestLabel "basic2" basic2,

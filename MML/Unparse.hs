@@ -66,7 +66,7 @@ unparseAttr (name, es) =
     <> unparseExps es
     <> text ">"
 
-special = "<>{}:\\~%$"
+special = "<>{}:\\~%$^"
 whitespace = " \x0d\x0a\t"
 escaped = special ++ whitespace
 
@@ -75,5 +75,5 @@ unparseChar x   | elem x escaped    = "\\" ++ [x]
                 | otherwise         = [x]
 
 unparseStr :: String -> PP.Doc
-unparseStr "" = text "%"
+unparseStr "" = text "^"
 unparseStr xs = text . (concatMap unparseChar) $ xs
