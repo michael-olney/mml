@@ -10,11 +10,12 @@ module MML.Parse (
     ) where
 
 import Prelude hiding (exp)
-import Text.ParserCombinators.Parsec hiding (parse)
+import Text.ParserCombinators.Parsec hiding (parse, tokens)
 import qualified Text.ParserCombinators.Parsec as P
-import Text.ParserCombinators.Parsec.Prim hiding (parse)
+import Text.ParserCombinators.Parsec.Prim hiding (parse, tokens)
 import Control.Monad
 import Data.List
+import Debug.Trace
 
 --import qualified MML.Parsev0 as V0
 
@@ -32,7 +33,7 @@ parse name mml = let
 
 tokenize :: String -> String -> IO (Either String [Token])
 tokenize name mml = let
-    r = P.parse rawTokens name mml
+    r = P.parse tokens name mml
     in
         (case r of
             (Left err)      -> return . Left . show $ err
@@ -108,6 +109,49 @@ rawTokens = do
     pos <- getPosition
     eof
     return . (++ [(TEOF, pos)]) $ xs
+
+isSpace (TSpace _)  = True
+isSpace x           = False
+
+isEscapedSpace (TSpace (Just _))    = True
+isEscapedSpace _                    = False
+
+isChar (TBrace _ _ BVCharLike)  = True
+isChar (TChar {})               = True
+isChar x                        = False
+
+data GroupType = GTSpace [TokenPos] | GTChar [TokenPos] | GTSpecial [TokenPos]
+    deriving (Show, Eq)
+
+unwrapGT (GTSpace xs)   = xs
+unwrapGT (GTChar xs)    = xs
+unwrapGT (GTSpecial xs) = xs
+
+eatspaces :: [TokenPos] -> [TokenPos]
+eatspaces xs = eatruns runs
+    where
+        runs = (map aux) . (groupBy groupFun2) $ xs
+        groupFun = isSpace . fst
+        groupFun2 x y = groupFun x == groupFun y
+        aux x   | isSpace . fst . head $ x  = GTSpace x
+                | isChar . fst . head $ x   = GTChar x
+                | otherwise                 = GTSpecial x
+        eatruns ((GTChar x):(GTSpace s):(GTChar y):xs) =
+            (x ++ (one s)) ++ (eatruns $ (GTChar y):xs)
+        eatruns (x:(GTSpace s):xs) =
+            ((unwrapGT x) ++ (all s)) ++ (eatruns xs)
+        eatruns ((GTSpace s):xs) =
+            (all s) ++ (eatruns xs)
+        eatruns x =
+            concatMap unwrapGT x
+        all = filter (isEscapedSpace . fst)
+        one [] = []
+        one xs@((_, pos):_) | (length . all $ xs) > 0 = all xs
+                            | otherwise =
+                ((TSpace Nothing, pos):) . (filter (isEscapedSpace . fst)) $ xs
+
+tokens :: Parser [TokenPos]
+tokens = rawTokens >>= return . eatspaces
 
 special = "<>{}:\\~%$^"
 whitespace = " \x0d\x0a\t"

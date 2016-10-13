@@ -119,25 +119,19 @@ stringsep0 = parseEqTest " a ~ b " [Str "a", Str "b"]
 stringsep1 = parseRejectTest " a ~~ b "
 stringsep2 = parseRejectTest "~a"
 
-tokenize0 = tokenizeEqTest "  <%> " [
-        TSpace Nothing, TSpace Nothing,
+tokenize0 = tokenizeEqTest " <%> " [
         TBrace BTCall BDOpen BVSpecialLike,
         TBrace BTUnknown BDClose BVSpecialLike,
-        TSpace Nothing,
         TEOF
         ]
 tokenize1 = tokenizeEqTest " {%}> " [
-        TSpace Nothing,
         TBrace BTCall BDOpen BVCharLike,
         TBrace BTUnknown BDClose BVCharLike,
         TBrace BTUnknown BDClose BVSpecialLike,
-        TSpace Nothing,
         TEOF
         ]
 tokenize2 = tokenizeEqTest " ^ " [
-        TSpace Nothing,
         TEmptyStr,
-        TSpace Nothing,
         TEOF
         ]
 tokenize3 = tokenizeEqTest "{$}" [
@@ -151,15 +145,11 @@ tokenize4 = tokenizeEqTest "<$>" [
         TEOF
         ]
 tokenize5 = tokenizeEqTest " ~ " [
-        TSpace Nothing,
         TStrSep,
-        TSpace Nothing,
         TEOF
         ]
 tokenize6 = tokenizeEqTest " : " [
-        TSpace Nothing,
         TSplit,
-        TSpace Nothing,
         TEOF
         ]
 tokenize7 = tokenizeEqTest "\\>" [
@@ -171,19 +161,15 @@ tokenize8 = tokenizeEqTest "\\\\" [
         TEOF
         ]
 tokenize9 = tokenizeEqTest " a b " [
-        TSpace Nothing,
         TChar 'a',
         TSpace Nothing,
         TChar 'b',
-        TSpace Nothing,
         TEOF
         ]
 tokenize10 = tokenizeEqTest " a\\ b " [
-        TSpace Nothing,
         TChar 'a',
         TSpace (Just ' '),
         TChar 'b',
-        TSpace Nothing,
         TEOF
         ]
 

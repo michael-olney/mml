@@ -10,7 +10,7 @@ version:             0.1.0.0
 synopsis: Haskell implementation of the Macroing Markup Language.
 -- description:         
 homepage:            http://mpolney.com/mml
-license:             GPL-2
+license:             BSD2
 license-file:        LICENSE
 author:              Michael Olney <mpolney@mpolney.com>
 maintainer:          Michael Olney <mpolney@mpolney.com>
