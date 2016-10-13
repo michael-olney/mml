@@ -191,6 +191,27 @@ tokenize13 = tokenizeEqTest " a \\ \\ b " [
         TChar 'b',
         TEOF
         ]
+tokenize14 = tokenizeEqTest " { \\ \\ } " [
+        TBrace BTTag BDOpen BVCharLike,
+        TSpace (Just ' '),
+        TSpace (Just ' '),
+        TBrace BTUnknown BDClose BVCharLike,
+        TEOF
+        ]
+tokenize15 = tokenizeEqTest " {$ \\ \\ } " [
+        TBrace BTVar BDOpen BVCharLike,
+        TSpace (Just ' '),
+        TSpace (Just ' '),
+        TBrace BTUnknown BDClose BVCharLike,
+        TEOF
+        ]
+tokenize16 = tokenizeEqTest " {% \\ \\ } " [
+        TBrace BTCall BDOpen BVCharLike,
+        TSpace (Just ' '),
+        TSpace (Just ' '),
+        TBrace BTUnknown BDClose BVCharLike,
+        TEOF
+        ]
 
 tests = TestList [
     TestLabel "tokenize0" tokenize0,
@@ -207,6 +228,9 @@ tests = TestList [
     TestLabel "tokenize11" tokenize11,
     TestLabel "tokenize12" tokenize12,
     TestLabel "tokenize13" tokenize13,
+    TestLabel "tokenize14" tokenize14,
+    TestLabel "tokenize15" tokenize15,
+    TestLabel "tokenize16" tokenize16,
     TestLabel "basic0" basic0,
     TestLabel "basic1" basic1 ,
     TestLabel "basic2" basic2,
