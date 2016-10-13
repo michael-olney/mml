@@ -172,6 +172,25 @@ tokenize10 = tokenizeEqTest " a\\ b " [
         TChar 'b',
         TEOF
         ]
+tokenize11 = tokenizeEqTest " a\\  b " [
+        TChar 'a',
+        TSpace (Just ' '),
+        TChar 'b',
+        TEOF
+        ]
+tokenize12 = tokenizeEqTest " a \\  b " [
+        TChar 'a',
+        TSpace (Just ' '),
+        TChar 'b',
+        TEOF
+        ]
+tokenize13 = tokenizeEqTest " a \\ \\ b " [
+        TChar 'a',
+        TSpace (Just ' '),
+        TSpace (Just ' '),
+        TChar 'b',
+        TEOF
+        ]
 
 tests = TestList [
     TestLabel "tokenize0" tokenize0,
@@ -185,6 +204,9 @@ tests = TestList [
     TestLabel "tokenize8" tokenize8,
     TestLabel "tokenize9" tokenize9,
     TestLabel "tokenize10" tokenize10,
+    TestLabel "tokenize11" tokenize11,
+    TestLabel "tokenize12" tokenize12,
+    TestLabel "tokenize13" tokenize13,
     TestLabel "basic0" basic0,
     TestLabel "basic1" basic1 ,
     TestLabel "basic2" basic2,
