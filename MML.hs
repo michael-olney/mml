@@ -20,14 +20,14 @@ Syntax TODO:
 -1) Figure out how to test macro calls -- generics?
 0) Add tests for evaluation, traceback
 1) Make attrs insensitive to ordering (Data.Map or something like that)
-2) Turn strings in Exp to Exp's..
-3) Make attributes more distinct from tags
-4) Add traceback to Tags in Exp
-4) Change colon to another character
-5) Add version specifier to head!
-6) Introduce code escaping mode
-7) Handle different kinds of whitespace
-8) Make / the string separation operator (for URLs)?
+2) Make attributes more distinct from tags
+3) Add traceback to Tags in Exp
+5) Change colon to another character
+6) Add version specifier to head!
+7) Introduce code escaping mode
+8) Handle different kinds of whitespace
+9) Reader macros
+10) Make / the string separation operator (for URLs)?
 -}
 
 {-
