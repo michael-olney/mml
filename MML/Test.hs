@@ -1,6 +1,7 @@
 module Main where
 
 import MML
+import MML.Lex
 import qualified Data.Map as M
 
 import Test.HUnit
@@ -9,15 +10,15 @@ import System.Exit
 tokenizeEqTest str v = TestCase (do
         r <- tokenize "<unknown>" str
         (case r of 
-            (Left _)    -> assertBool "tokenizer should accept this" False
-            (Right toks) -> assertEqual "" v toks
+            (Left _)        -> assertBool "tokenizer should accept this" False
+            (Right toks)    -> assertEqual "" v (fst . unzip $ toks)
             )        
         )
 
 parseEqTest str v = TestCase (do
         r <- parse "<unknown>" str
         (case r of 
-            (Left _)    -> assertBool "parser should accept this" False
+            (Left e)    -> assertBool ("parser should accept this: " ++ e) False
             (Right doc) -> assertEqual "" v doc
             )        
         )
@@ -83,14 +84,14 @@ space1 = parseEqTest " a b " ([Str "a b"])
 space2 = parseEqTest " a b   " ([Str "a b"])
 space3 = parseEqTest " a   b   " ([Str "a b"])
 space4 = parseEqTest "    a   b   " ([Str "a b"])
-space5 = parseEqTest "    a  \\ b   " ([Str "a  b"])
-space6 = parseEqTest "    a \\  b   " ([Str "a   b"])
+space5 = parseEqTest "    a  \\ b   " ([Str "a b"])
+space6 = parseEqTest "    a \\  b   " ([Str "a b"])
 space7 = parseEqTest "    a \\ <x> b   " ([
-    Str "a  ", Tag (Str "x") [] Nothing, Str "b"])
+    Str "a ", Tag (Str "x") [] Nothing, Str "b"])
 space8 = parseEqTest "\\    a \\ <x> b   " ([
-    Str "  a  ", Tag (Str "x") [] Nothing, Str "b"])
+    Str " a ", Tag (Str "x") [] Nothing, Str "b"])
 space9 = parseEqTest "\\ \\\\   a \\ <x> b   " ([
-    Str " \\ a  ", Tag (Str "x") [] Nothing, Str "b"])
+    Str " \\ a ", Tag (Str "x") [] Nothing, Str "b"])
 space10 = parseEqTest "a\\ " ([Str "a "])
 
 roundtrip0 = roundTripTest [Tag (Str "a") [] Nothing]
@@ -232,7 +233,7 @@ tests = TestList [
     TestLabel "tokenize15" tokenize15,
     TestLabel "tokenize16" tokenize16,
     TestLabel "basic0" basic0,
-    TestLabel "basic1" basic1 ,
+    TestLabel "basic1" basic1,
     TestLabel "basic2" basic2,
     TestLabel "basic3" basic3,
     TestLabel "basic4" basic4,
