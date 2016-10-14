@@ -4,6 +4,8 @@ import MML.Types
 import Text.PrettyPrint hiding (Doc, Str)
 import qualified Text.PrettyPrint as PP
 import Data.List (elem, groupBy, intersperse)
+import qualified Data.Map as M
+import Data.Map (Map)
 
 data PseudoExp = StrSep
 
@@ -55,8 +57,8 @@ unparseChildren :: Maybe [Exp] -> PP.Doc
 unparseChildren Nothing     = empty
 unparseChildren (Just xs)   = text ":" <> unparseExps xs
 
-unparseAttrs :: [(Exp, [Exp])] -> PP.Doc
-unparseAttrs = (foldr (<>) empty) . (map unparseAttr)
+unparseAttrs :: Map Exp [Exp] -> PP.Doc
+unparseAttrs = (foldr (<>) empty) . (map unparseAttr) . M.toList
 
 unparseAttr :: (Exp, [Exp]) -> PP.Doc
 unparseAttr (name, es) =

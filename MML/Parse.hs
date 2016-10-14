@@ -10,6 +10,7 @@ import Text.ParserCombinators.Parsec.Prim hiding (parse, token, tokens, Parser)
 import Control.Monad
 import Data.List
 import Debug.Trace
+import qualified Data.Map as M
 
 --import qualified MML.Parsev0 as V0
 
@@ -115,7 +116,7 @@ tag :: Parser Exp
 tag = do
     (TBrace BTTag BDOpen bv) <- token matchTagBrace
     name <- exp
-    attrs <- many attr
+    attrs <- many attr >>= return . M.fromList
     exp <- optionMaybe tagExps
     token (== (TBrace BTUnknown BDClose bv))
     return (Tag name attrs exp)

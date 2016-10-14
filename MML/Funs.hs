@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module MML.Funs (MacroFun, MacroFuns, funs) where
 
@@ -8,7 +9,6 @@ import MML
 import MML.Types
 import MML.Parse
 import MML.Eval
-import qualified Data.Map as M
 import Data.Char
 import Data.List
 import System.IO
@@ -25,10 +25,12 @@ import Control.Monad
 import Control.Monad.Extra
 import Codec.Archive.Zip
 import Data.ByteString.Lazy as B (writeFile)
+import qualified Data.Map as M
+import Data.Map ((!))
 
-convParam (Tag (Str name) [] (Just v))  = (name, v)
-convParam (Tag _ [] _)                  = error "shouldn't see this"
-convParam _                             = error "wrong form for parameter"
+convParam (Tag (Str name) (M.toList -> []) (Just v)) = (name, v)
+convParam (Tag _ (M.toList -> []) _)        = error "shouldn't see this"
+convParam _                                 = error "wrong form for parameter"
 
 inc :: [Exp] -> IO [Exp]
 inc ((Str fn):rest) = do
@@ -52,12 +54,13 @@ subst :: Ctx -> [Exp] -> [Exp]
 subst ctx@(Ctx tb env funs) = auxList
     where
         aux (Var name)
-            | M.member name env     = env M.! name
+            | M.member name env     = env ! name
             | otherwise             = error $ "unbound variable: " ++ name
         aux (Tag name attrs children) =
                 let
-                    (keys, vals) = unzip attrs
-                    attrs2 = zip keys (map auxList vals)
+                    {-(keys, vals) = unzip . M.toList $ attrs
+                    attrs2 = zip keys (map auxList vals)-}
+                    attrs2 = M.map auxList attrs
                     [name2] = aux name
                 in
                     [Tag name2 attrs2 ((liftM auxList) children)]
@@ -79,8 +82,7 @@ resizeJuicy _ w h = error "unsupported pixel format"
 
 resizesingle :: Exp -> IO Exp
 resizesingle e@(Tag (Str "img") as Nothing) = do
-    let asm = M.fromList as
-    let attr = unwrapStr . (asm M.!) . Str
+    let attr = unwrapStr . (as !) . Str
     let src = attr $ "src"
     let w::Int = read . attr $ "width"
     let h::Int = read . attr $ "height"
@@ -91,9 +93,10 @@ resizesingle e@(Tag (Str "img") as Nothing) = do
     savePngImage thumbdst resized
     putStr "OK\n"
 
-    let asm2 = (M.insert (Str "src") [Str thumbdst]) . (M.delete (Str "width")) . (M.delete (Str "height")) $ asm
+    -- TODO clean up
+    let as2 = (M.insert (Str "src") [Str thumbdst]) . (M.delete (Str "width")) . (M.delete (Str "height")) $ as
 
-    return (Tag (Str "img") (M.toList asm2) Nothing)
+    return (Tag (Str "img") as2 Nothing)
 resizesingle e@(Tag (Str "img") as (Just xs)) = do
     ys <- resizeimgs xs
     (Tag (Str "img") as2 Nothing) <- resizesingle (Tag (Str "img") as Nothing)
@@ -117,9 +120,10 @@ filesize e = error ("bad usage for macro 'filesize'" ++ (show e))
 
 linksingle e@(Tag (Str "img") as (Just [Tag (Str "img") as2 Nothing])) =
     let
-        src = unwrapStr ((M.fromList as2) M.! (Str "src"))
+        src = unwrapStr (as2 ! (Str "src"))
+        attrs = [(Str "href", [Str ("javascript:showImage('" ++ src ++ "');")])]
     in
-        Tag (Str "a") [(Str "href", [Str ("javascript:showImage('" ++ src ++ "');")])] (
+        Tag (Str "a") (M.fromList attrs) (
             Just [Tag (Str "img") as Nothing])
 linksingle e@(Tag (Str "img") as x) =
     linksingle (Tag (Str "img") as (Just [Tag (Str "img") as Nothing]))
@@ -155,7 +159,7 @@ prettyfilesize [(Str x)] =
 prettyfilesize _ = error "bad usage of macro prettyfilesize"
 
 listpresskitshots :: [Exp] -> IO [Exp]
-listpresskitshots (Tag (Str "path") [] (Just [Str fn]):(Tag (Str "suffix") [] (Just [Str suffix])):[]) = do
+listpresskitshots (Tag (Str "path") (M.toList -> []) (Just [Str fn]):(Tag (Str "suffix") (M.toList -> []) (Just [Str suffix])):[]) = do
     xs <- getDirectoryContents fn
     let aux x = take ((length x) - (length suffix)) x
     return . (map Str) . (map aux) . filter (isSuffixOf suffix) $ xs
@@ -165,7 +169,7 @@ nestEnv :: Env -> Env -> Env
 nestEnv outer inner = M.union inner outer
 
 substlist :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
-substlist ctx@(Ctx tb env funs) evalFun ((Tag (Str "list") [] (Just xs)):(Tag (Str "bind") [] (Just vnexps)):(Tag (Str "targ") [] (Just targ)):[]) =
+substlist ctx@(Ctx tb env funs) evalFun ((Tag (Str "list") (M.toList -> []) (Just xs)):(Tag (Str "bind") (M.toList -> []) (Just vnexps)):(Tag (Str "targ") (M.toList -> []) (Just targ)):[]) =
     let
         aux varname item = do
             let env' = nestEnv (M.fromList [(varname, [item])]) env
@@ -190,7 +194,7 @@ unwrapJust Nothing = error "unwrap Just failed"
 unwrapJust (Just x) = x
 
 createzip :: [Exp] -> IO [Exp]
-createzip ((Tag (Str "outfilename") [] (Just [Str outfn])):(Tag (Str "filenames") [] (Just fs)):(Tag (Str "pathtrim") [] (Just [Str pathtrimstr])):(Tag (Str "outbase") [] (Just [Str outbase])):[]) = do
+createzip ((Tag (Str "outfilename") (M.toList -> []) (Just [Str outfn])):(Tag (Str "filenames") (M.toList -> []) (Just fs)):(Tag (Str "pathtrim") (M.toList -> []) (Just [Str pathtrimstr])):(Tag (Str "outbase") (M.toList -> []) (Just [Str outbase])):[]) = do
     putStr ("Creating " ++ outfn ++ "..\n")
     let (pathtrim::Int) = read pathtrimstr
     let options = [OptRecursive, OptLocation "" True]

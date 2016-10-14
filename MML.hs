@@ -36,4 +36,5 @@ Other TODO:
 2) Allow macros to be defined by external executables
 3) Build macros for building new macros - ensure this is modular!
 4) Dependency analysis
+5) Introduce pretty-printing macros (turn e.g. "\ <em:word>\ " into {em:word}..
 -}

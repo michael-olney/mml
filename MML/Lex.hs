@@ -29,13 +29,13 @@ tokenize name mml = let
             )
 
 data BraceVariant = BVSpecialLike | BVCharLike
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 data BraceDir = BDOpen | BDClose
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 data BraceType = BTTag | BTCall | BTVar | BTUnknown
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 data SpaceType = STBare | STEscaped
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 data Token =
     TChar Char
@@ -45,7 +45,7 @@ data Token =
     | TStrSep
     | TSplit
     | TEOF
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 type TokenPos = (Token, SourcePos)
 

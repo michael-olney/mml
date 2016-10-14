@@ -3,6 +3,7 @@ module MML.HTML (toHTML) where
 import MML.Types
 import Data.Char
 import Data.List
+import qualified Data.Map as M
 
 header = "<!DOCTYPE HTML>"
 footer = ""
@@ -67,7 +68,7 @@ conv :: Exp -> String
 conv (Var {})                               = error "unevaluated variable encountered in MML.HTML"
 conv (Call {})                              = error "unevaluated macro call encountered in MML.HTML"
 conv t@(Tag (Str name) as children)
-                        | isValidName name  = convTag name as children
+                        | isValidName name  = convTag name (M.toList as) children
                         | otherwise         = error $ "bad tag name: " ++ name
 conv t@(Tag _ _ _)                          =
         error "tag name must be STRING when converting to HTML"

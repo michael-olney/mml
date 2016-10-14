@@ -58,9 +58,9 @@ runExp ctx@(Ctx ctxtb env funs) (Call calltb nameexp cs)  = do
 runExp ctx@(Ctx tb env funs) (Tag name as cs) = do
     name' <- runExp ctx name >>= mustSingle ctx "tag name found to be non-singular during evaluation"
     cs' <- runOptExps ctx cs
-    let (ks, vs) = unzip as
+    let (ks, vs) = unzip . M.toList $ as
     vs'<- mapM (runExps ctx) vs
-    return [Tag name' (zip ks vs') cs']
+    return [Tag name' (M.fromList $ zip ks vs') cs']
 
 runExp ctx (Tag _ as cs)            =
     macroError ctx "tag name must be STRING by the time the tag is evaluated"

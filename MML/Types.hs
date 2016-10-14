@@ -1,6 +1,7 @@
 module MML.Types where
 
 import qualified Data.Map as M
+import Data.Map (Map)
 
 type Doc = [Exp]
 
@@ -12,7 +13,7 @@ emptyTBR = TracebackRecord "" 0 0 ""
 type Traceback = [TracebackRecord]
 
 data Exp =
-    Tag Exp [(Exp, [Exp])] (Maybe [Exp])
+    Tag Exp (Map Exp [Exp]) (Maybe [Exp])
     | Str String
     | Call TracebackRecord Exp [Exp]
     | Var String
