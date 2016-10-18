@@ -134,6 +134,7 @@ eatspaces xs = eatruns runs
             (all s) ++ (eatruns xs)
         eatruns (x:xs) =
             (concatMap unwrapGT [x]) ++ (eatruns xs)
+        eatruns [] = []
         all = filter (isEscapedSpace . fst)
         one [] = []
         one xs@((_, pos):_) | (length . all $ xs) > 0 = all xs
