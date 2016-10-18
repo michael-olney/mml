@@ -108,7 +108,7 @@ isChar (TBrace _ _ BVCharLike)  = True
 isChar (TChar {})               = True
 isChar x                        = False
 
-data GroupType = GTSpace [TokenPos] | GTChar [TokenPos] | GTSpecial [TokenPos]
+data GroupType a = GTSpace a | GTChar a | GTSpecial a
     deriving (Show, Eq)
 
 unwrapGT (GTSpace xs)   = xs
@@ -119,19 +119,21 @@ eatspaces :: [TokenPos] -> [TokenPos]
 eatspaces xs = eatruns runs
     where
         runs = (map aux) . (groupBy groupFun2) $ xs
-        groupFun = isSpace . fst
-        groupFun2 x y = groupFun x == groupFun y
-        aux x   | isSpace . fst . head $ x  = GTSpace x
-                | isChar . fst . head $ x   = GTChar x
-                | otherwise                 = GTSpecial x
+        groupFun2 x y = aux2 x == aux2 y
+        aux x   | isSpace . fst . head $ x = GTSpace x
+                | isChar . fst . head $ x  = GTChar x
+                | otherwise         = GTSpecial x
+        aux2 x   | isSpace . fst $ x = GTSpace ()
+                | isChar . fst $ x  = GTChar ()
+                | otherwise         = GTSpecial ()
         eatruns ((GTChar x):(GTSpace s):(GTChar y):xs) =
             (x ++ (one s)) ++ (eatruns $ (GTChar y):xs)
         eatruns (x:(GTSpace s):xs) =
             ((unwrapGT x) ++ (all s)) ++ (eatruns xs)
         eatruns ((GTSpace s):xs) =
             (all s) ++ (eatruns xs)
-        eatruns x =
-            concatMap unwrapGT x
+        eatruns (x:xs) =
+            (concatMap unwrapGT [x]) ++ (eatruns xs)
         all = filter (isEscapedSpace . fst)
         one [] = []
         one xs@((_, pos):_) | (length . all $ xs) > 0 = all xs

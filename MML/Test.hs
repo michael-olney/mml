@@ -70,6 +70,8 @@ basic7 = parseEqTest "<(--a<--b):\\>><\\ :\\>>:a\\<b\\>c>" ([
 basic8 = parseEqTest "<$a>" [Var "a"]
 basic9 = parseEqTest "<$^>" [Var ""]
 basic10 = parseEqTest "<$testing>" [Var "testing"]
+basic11 = parseEqTest "1. This is a  test" [Str "1. This is a test"]
+basic12 = parseEqTest "<t:a b>" [Tag (Str "t") M.empty (Just [Str "a b"])]
 
 reject0 = parseRejectTest "<"
 reject1 = parseRejectTest ">"
@@ -116,6 +118,7 @@ roundtrip9 = roundTripTest [Str ""]
 roundtrip10 = roundTripTest [Var ""]
 roundtrip11 = roundTripTest [Var "testing"]
 roundtrip12 = roundTripTest [Var "\\ "]
+roundtrip13 = roundTripTest [Str "1. This is a  test"]
 
 stringsep0 = parseEqTest " a ~ b " [Str "a", Str "b"]
 stringsep1 = parseRejectTest " a ~~ b "
@@ -214,6 +217,16 @@ tokenize16 = tokenizeEqTest " {% \\ \\ } " [
         TBrace BTUnknown BDClose BVCharLike,
         TEOF
         ]
+tokenize17 = tokenizeEqTest "<t:a b>" [
+        TBrace BTTag BDOpen BVSpecialLike,
+        TChar 't',
+        TSplit,
+        TChar 'a',
+        TSpace Nothing,
+        TChar 'b',
+        TBrace BTUnknown BDClose BVSpecialLike,
+        TEOF
+        ]
 
 tests = TestList [
     TestLabel "tokenize0" tokenize0,
@@ -233,6 +246,7 @@ tests = TestList [
     TestLabel "tokenize14" tokenize14,
     TestLabel "tokenize15" tokenize15,
     TestLabel "tokenize16" tokenize16,
+    TestLabel "tokenize17" tokenize17,
     TestLabel "basic0" basic0,
     TestLabel "basic1" basic1,
     TestLabel "basic2" basic2,
@@ -244,6 +258,8 @@ tests = TestList [
     TestLabel "basic8" basic8,
     TestLabel "basic9" basic9,
     TestLabel "basic10" basic10,
+    TestLabel "basic11" basic11,
+    TestLabel "basic12" basic12,
     TestLabel "reject0" reject0,
     TestLabel "reject1" reject1,
     TestLabel "reject2" reject3,
@@ -276,6 +292,7 @@ tests = TestList [
     TestLabel "roundtrip10" roundtrip10,
     TestLabel "roundtrip11" roundtrip11,
     TestLabel "roundtrip12" roundtrip12,
+    TestLabel "roundtrip13" roundtrip13,
     TestLabel "stringsep0" stringsep0,
     TestLabel "stringsep1" stringsep1,
     TestLabel "stringsep2" stringsep2

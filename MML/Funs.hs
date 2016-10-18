@@ -6,18 +6,19 @@
 module MML.Funs (MacroFun, MacroFuns, funs) where
 
 import MML
+import Prelude hiding (readFile)
 import MML.Types
 import MML.Parse
 import MML.Eval
 import Data.Char
 import Data.List
-import System.IO
 import Codec.Picture
 import qualified Vision.Image as V
 import Vision.Primitive.Shape
 import Vision.Image.JuicyPixels
 import Vision.Image.Transform
 import System.IO
+import qualified System.IO.Strict as SIO
 import System.Directory
 import System.FilePath
 import System.Exit
@@ -32,11 +33,17 @@ convParam (Tag (Str name) (M.toList -> []) (Just v)) = (name, v)
 convParam (Tag _ (M.toList -> []) _)        = error "shouldn't see this"
 convParam _                                 = error "wrong form for parameter"
 
+rawinc :: [Exp] -> IO [Exp]
+rawinc ((Str fn):rest) = do
+    let bindings = M.fromList . (map convParam) $ rest
+    inp <- SIO.readFile fn
+    return [Str inp]
+raw inc _ = error "wrong form for macro 'rawinc'"
+
 inc :: [Exp] -> IO [Exp]
 inc ((Str fn):rest) = do
     let bindings = M.fromList . (map convParam) $ rest
-    ih <- openBinaryFile fn ReadMode
-    inp <- hGetContents ih
+    inp <- SIO.readFile fn
     r <- parse ("include: " ++ fn) inp
     doc <- (case r of
         (Left err)  -> error $ "parse error: " ++ err
@@ -44,7 +51,6 @@ inc ((Str fn):rest) = do
         )
     doc2 <- eval (Ctx [] bindings funs) doc
 
-    hClose ih
     return doc2
 inc _ = error "wrong form for macro 'inc'"
 
@@ -232,6 +238,7 @@ funs = M.fromList [
     ("substlist", substlist),
     ("createzip", strictIO createzip),
     ("inc", strictIO inc),
+    ("rawinc", strictIO rawinc),
     ("concat", strictIO concatMacro)
     ]
 
