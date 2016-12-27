@@ -104,29 +104,44 @@ isSpace x           = False
 isEscapedSpace (TSpace (Just _))    = True
 isEscapedSpace _                    = False
 
-isChar (TBrace _ _ BVCharLike)  = True
 isChar (TChar {})               = True
 isChar x                        = False
 
-data GroupType a = GTSpace a | GTChar a | GTSpecial a
+data GroupType a =
+    GTSpace a | GTChar a | GTSpecial a | GTCharLike BraceDir a
     deriving (Show, Eq)
 
-unwrapGT (GTSpace xs)   = xs
-unwrapGT (GTChar xs)    = xs
-unwrapGT (GTSpecial xs) = xs
+unwrapGT (GTSpace xs)           = xs
+unwrapGT (GTChar xs)            = xs
+unwrapGT (GTCharLike _ xs)      = xs
+unwrapGT (GTSpecial xs)         = xs
 
 eatspaces :: [TokenPos] -> [TokenPos]
 eatspaces xs = eatruns runs
     where
         runs = (map aux) . (groupBy groupFun2) $ xs
         groupFun2 x y = aux2 x == aux2 y
-        aux x   | isSpace . fst . head $ x = GTSpace x
-                | isChar . fst . head $ x  = GTChar x
-                | otherwise         = GTSpecial x
-        aux2 x   | isSpace . fst $ x = GTSpace ()
-                | isChar . fst $ x  = GTChar ()
-                | otherwise         = GTSpecial ()
+        isCharLikeO (TBrace _ BDOpen BVCharLike)    = True
+        isCharLikeO _                               = False
+        isCharLikeC (TBrace _ BDClose BVCharLike)   = True
+        isCharLikeC _                               = False
+        aux x   | isSpace . fst . head $ x      = GTSpace x
+                | isChar . fst . head $ x       = GTChar x
+                | isCharLikeO . fst . head $ x  = (GTCharLike BDOpen) x
+                | isCharLikeC . fst . head $ x  = (GTCharLike BDClose) x
+                | otherwise                     = GTSpecial x
+        aux2 x  | isSpace . fst $ x             = GTSpace ()
+                | isChar . fst $ x              = GTChar ()
+                | isCharLikeO . fst $ x         = GTCharLike BDOpen ()
+                | isCharLikeC . fst $ x         = GTCharLike BDClose ()
+                | otherwise                     = GTSpecial ()
         eatruns ((GTChar x):(GTSpace s):(GTChar y):xs) =
+            (x ++ (one s)) ++ (eatruns $ (GTChar y):xs)
+        eatruns ((GTCharLike BDClose x):(GTSpace s):(GTChar y):xs) =
+            (x ++ (one s)) ++ (eatruns $ (GTChar y):xs)
+        eatruns ((GTChar x):(GTSpace s):(GTCharLike BDOpen y):xs) =
+            (x ++ (one s)) ++ (eatruns $ (GTCharLike BDOpen y):xs)
+        eatruns ((GTCharLike BDClose x):(GTSpace s):(GTCharLike BDOpen y):xs) =
             (x ++ (one s)) ++ (eatruns $ (GTChar y):xs)
         eatruns (x:(GTSpace s):xs) =
             ((unwrapGT x) ++ (all s)) ++ (eatruns xs)

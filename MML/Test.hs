@@ -227,6 +227,28 @@ tokenize17 = tokenizeEqTest "<t:a b>" [
         TBrace BTUnknown BDClose BVSpecialLike,
         TEOF
         ]
+tokenize18 = tokenizeEqTest "<t:a b >" [
+        TBrace BTTag BDOpen BVSpecialLike,
+        TChar 't',
+        TSplit,
+        TChar 'a',
+        TSpace Nothing,
+        TChar 'b',
+        TBrace BTUnknown BDClose BVSpecialLike,
+        TEOF
+        ]
+tokenize19 = tokenizeEqTest "{t:a b \n }  c" [
+        TBrace BTTag BDOpen BVCharLike,
+        TChar 't',
+        TSplit,
+        TChar 'a',
+        TSpace Nothing,
+        TChar 'b',
+        TBrace BTUnknown BDClose BVCharLike,
+        TSpace Nothing,
+        TChar 'c',
+        TEOF
+        ]
 
 tests = TestList [
     TestLabel "tokenize0" tokenize0,
@@ -247,6 +269,8 @@ tests = TestList [
     TestLabel "tokenize15" tokenize15,
     TestLabel "tokenize16" tokenize16,
     TestLabel "tokenize17" tokenize17,
+    TestLabel "tokenize18" tokenize18,
+    TestLabel "tokenize19" tokenize19,
     TestLabel "basic0" basic0,
     TestLabel "basic1" basic1,
     TestLabel "basic2" basic2,
