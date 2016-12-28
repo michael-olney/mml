@@ -1,0 +1,9 @@
+- Add tests for evaluation, traceback
+- Add traceback to Tags in Exp
+- Change colon to another character
+- Add version specifier to head
+- Introduce code escaping mode
+- Reader macros
+- Make all symbol imports explicit (whitelist)
+- Allow macros to be defined by external executables
+- Build macros for building new macros
