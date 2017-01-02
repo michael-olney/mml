@@ -25,9 +25,9 @@ putList f xs = do
     put ((fromIntegral . length $ xs)::Word32)
     mapM_ f xs
 
-putAttr (name, exp) = do
+putAttr (name, exps) = do
     put name
-    put exp
+    putExps exps
 
 putAttrMap xs = putList putAttr $ M.toList xs
 

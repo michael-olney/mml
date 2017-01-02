@@ -261,6 +261,7 @@ binary0 = binaryTest [Str "a"]
 binary1 = binaryTest [Str "abc", Str "def"]
 binary2 = binaryTest [Tag (Str "a") M.empty Nothing, Str "b"]
 binary3 = binaryTest []
+binary4 = binaryTest [Tag (Str "a") (M.fromList [(Str "x", [Str "y"])]) (Just [Str "b"])]
 
 tests = TestList [
     TestLabel "tokenize0" tokenize0,
@@ -335,7 +336,8 @@ tests = TestList [
     TestLabel "binary0" binary0,
     TestLabel "binary1" binary1,
     TestLabel "binary2" binary2,
-    TestLabel "binary3" binary3
+    TestLabel "binary3" binary3,
+    TestLabel "binary4" binary4
     ]
 
 main :: IO ()
