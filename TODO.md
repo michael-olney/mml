@@ -1,3 +1,4 @@
+- Fix unit testing: detect exceptions
 - Add tests for evaluation, traceback
 - Add traceback to Tags in Exp
 - Change colon to another character
