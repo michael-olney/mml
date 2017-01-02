@@ -49,7 +49,7 @@ roundTripTestFun e eq = TestCase (do
 roundTripTest e = roundTripTestFun e (==)
 
 binaryTest exps =
-    TestCase (assertEqual "" ((runGet getExps) . runPut . putExps $ exps) exps)
+    TestCase (assertEqual "" exps ((runGet getExps) . runPut . putExps $ exps))
 
 basic0 = parseEqTest "<a>" ([Tag (Str "a") (M.empty) Nothing])
 basic1 = parseEqTest "<a<x:y>>" ([
