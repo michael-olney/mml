@@ -2,7 +2,11 @@ module Main where
 
 import MML
 import MML.Lex
+import MML.Binary
 import qualified Data.Map as M
+
+import Data.Binary.Put (runPut)
+import Data.Binary.Get (runGet)
 
 import Test.HUnit
 import System.Exit
@@ -43,6 +47,9 @@ roundTripTestFun e eq = TestCase (do
         )
 
 roundTripTest e = roundTripTestFun e (==)
+
+binaryTest exps =
+    TestCase (assertEqual "" ((runGet getExps) . runPut . putExps $ exps) exps)
 
 basic0 = parseEqTest "<a>" ([Tag (Str "a") (M.empty) Nothing])
 basic1 = parseEqTest "<a<x:y>>" ([
@@ -250,6 +257,11 @@ tokenize19 = tokenizeEqTest "{t:a b \n }  c" [
         TEOF
         ]
 
+binary0 = binaryTest [Str "a"]
+binary1 = binaryTest [Str "abc", Str "def"]
+binary2 = binaryTest [Tag (Str "a") M.empty Nothing, Str "b"]
+binary3 = binaryTest []
+
 tests = TestList [
     TestLabel "tokenize0" tokenize0,
     TestLabel "tokenize1" tokenize1,
@@ -319,7 +331,11 @@ tests = TestList [
     TestLabel "roundtrip13" roundtrip13,
     TestLabel "stringsep0" stringsep0,
     TestLabel "stringsep1" stringsep1,
-    TestLabel "stringsep2" stringsep2
+    TestLabel "stringsep2" stringsep2,
+    TestLabel "binary0" binary0,
+    TestLabel "binary1" binary1,
+    TestLabel "binary2" binary2,
+    TestLabel "binary3" binary3
     ]
 
 main :: IO ()

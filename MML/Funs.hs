@@ -6,10 +6,12 @@
 module MML.Funs (MacroFun, MacroFuns, funs) where
 
 import MML
-import Prelude hiding (readFile)
 import MML.Types
 import MML.Parse
 import MML.Eval
+import MML.Scripting (runScript)
+
+import Prelude hiding (readFile)
 import Data.Char
 import Data.List
 import Codec.Picture
@@ -225,6 +227,18 @@ concatMacro xs  | allStrings    = return . (:[]) . Str . concat $ bareStrings
         allStrings  = (foldr (&&) True) . (map isStr) $ xs
         bareStrings = map unwrap1Str xs
 
+importscripts :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
+importscripts ctx@(Ctx {ctxMacros = macros}) eval
+    ((Tag (Str "scripts") _ (Just nameexps)):exps) = do
+    nameexps2 <- eval ctx nameexps
+    let names = map unwrap1Str nameexps2
+    let addScript macros name =
+            M.insert name (strictIO $ runScript name) macros
+    let macros2 = foldl addScript macros names
+
+    eval (ctx {ctxMacros = macros2}) exps
+importscripts _ _ _ = error "bad usage of importscripts"
+
 strictIO f ctx eval xs = (eval ctx xs) >>= f
 strict f ctx eval xs = (eval ctx xs) >>= return . f
 
@@ -239,6 +253,7 @@ funs = M.fromList [
     ("createzip", strictIO createzip),
     ("inc", strictIO inc),
     ("rawinc", strictIO rawinc),
-    ("concat", strictIO concatMacro)
+    ("concat", strictIO concatMacro),
+    ("importscripts", importscripts)
     ]
 

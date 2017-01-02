@@ -37,7 +37,11 @@ type MacroFunsAux a = M.Map String (MacroFunAux a)
 
 type Env = M.Map String [Exp]
 
-data Ctx = Ctx Traceback Env (MacroFunsAux Ctx)
+data Ctx = Ctx {
+    ctxTBR :: Traceback,
+    ctxEnv :: Env,
+    ctxMacros :: (MacroFunsAux Ctx)
+}
 
 type MacroFun = MacroFunAux Ctx
 type MacroFuns = MacroFunsAux Ctx
