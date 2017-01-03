@@ -69,6 +69,7 @@ getExpWithType 3 = do
     es <- getExps
     return $ Call (TracebackRecord "" 0 0 "") name es
 getExpWithType 4 = getUTF8 >>= return . Var
+getExpWithType x = fail $ "getExpWithType: " ++ (show x)
 
 instance Binary Exp where
     put (Tag name attrmap (Just es)) = do
