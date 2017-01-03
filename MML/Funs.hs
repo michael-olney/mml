@@ -48,8 +48,6 @@ inc ((Str fn):rest) = do
     return doc2
 inc _ = error "wrong form for macro 'inc'"
 
--- XXX split into three ops
-
 subst :: Ctx -> [Exp] -> [Exp]
 subst ctx@(Ctx tb env funs) = auxList
     where
@@ -58,8 +56,6 @@ subst ctx@(Ctx tb env funs) = auxList
             | otherwise             = error $ "unbound variable: " ++ name
         aux (Tag name attrs children) =
                 let
-                    {-(keys, vals) = unzip . M.toList $ attrs
-                    attrs2 = zip keys (map auxList vals)-}
                     attrs2 = M.map auxList attrs
                     [name2] = aux name
                 in

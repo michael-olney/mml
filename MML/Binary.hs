@@ -83,7 +83,7 @@ instance Binary Exp where
     put (Str xs) = do
         put (2::Word32)
         putUTF8 xs
-    put (Call tbr name es) = do -- XXX put traceback record
+    put (Call tbr name es) = do
         put (3::Word32)
         put name
         putExps es
