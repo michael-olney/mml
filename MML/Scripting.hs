@@ -1,13 +1,15 @@
 module MML.Scripting (runScript, beScript) where
 
-import Prelude hiding (getContents, putStr)
+import Prelude hiding (getContents, putStr, writeFile)
 import qualified Prelude as P (putStr)
-import Data.ByteString.Lazy (pack, unpack, getContents, putStr)
-import Data.ByteString.Internal (c2w, w2c)
+import qualified System.IO as SIO (writeFile)
+import Data.ByteString.Lazy.Char8 (pack, unpack, getContents, putStr, writeFile)
+import qualified Data.ByteString.Lazy.Char8 as B (length)
 import Data.Binary.Put (runPut)
 import Data.Binary.Get (runGet)
+import Control.Exception (catch, SomeException, displayException)
 
-import System.Process (readProcessWithExitCode)
+import System.Process.ByteString.Lazy (readProcessWithExitCode)
 
 import qualified Data.Map as M
 
@@ -21,8 +23,8 @@ beScript f = do
     f params >>= putStr . runPut . putExps
 
 runScript :: String -> [Exp] -> IO [Exp]
-runScript path params = do
-    let stdin = map w2c $ unpack $ runPut $ putExps params
-    P.putStr (show $ runGet getExps $ runPut $ putExps params)
-    (code, stdout, _) <- readProcessWithExitCode path [] stdin
-    return . (runGet getExps) . pack . (map c2w) $ stdout
+runScript name params = do
+    let path = "mml-" ++ name
+    let stdin = runPut $ putExps params
+    (code, stdout, stderr) <- readProcessWithExitCode path [] stdin
+    return . (runGet getExps) $ stdout
