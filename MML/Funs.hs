@@ -65,9 +65,6 @@ subst ctx@(Ctx tb env funs) = auxList
         aux (Call tb name cs) = [Call tb name (auxList cs)]
         auxList = concatMap aux
 
-convThumbChar '/' = '_'
-convThumbChar x = x
-
 filesize :: [Exp] -> IO [Exp]
 filesize [(Str fn)] = do
     h <- openFile fn ReadMode
@@ -75,21 +72,6 @@ filesize [(Str fn)] = do
     hClose h
     return . (:[]) . Str . show $ sz
 filesize e = error ("bad usage for macro 'filesize'" ++ (show e))
-
-linksingle e@(Tag (Str "img") as (Just [Tag (Str "img") as2 Nothing])) =
-    let
-        src = unwrapStr (as2 ! (Str "src"))
-        attrs = [(Str "href", [Str ("javascript:showImage('" ++ src ++ "');")])]
-    in
-        Tag (Str "a") (M.fromList attrs) (
-            Just [Tag (Str "img") as Nothing])
-linksingle e@(Tag (Str "img") as x) =
-    linksingle (Tag (Str "img") as (Just [Tag (Str "img") as Nothing]))
-linksingle (Tag name as (Just x)) = Tag name as (Just (linkimgs x))
-linksingle e = e
-
-linkimgs :: [Exp] -> [Exp]
-linkimgs = map linksingle
 
 kilobyte = 1024 :: Int
 megabyte = kilobyte*1024
@@ -165,7 +147,6 @@ strict f ctx eval xs = (eval ctx xs) >>= return . f
 funs :: MacroFuns
 funs = M.fromList [
     ("prettyfilesize", strict prettyfilesize),
-    ("linkimgs", strict linkimgs),
     ("filesize", strictIO filesize),
     ("substlist", substlist),
     ("inc", strictIO inc),
