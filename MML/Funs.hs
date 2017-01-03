@@ -14,7 +14,6 @@ import MML.Scripting (runScript)
 import Prelude hiding (readFile)
 import Data.Char
 import Data.List
-import System.Directory
 import qualified System.IO.Strict as SIO
 import System.Exit
 import System.IO
@@ -120,13 +119,6 @@ prettyfilesize [(Str x)] =
         [Str (aux units)] 
 prettyfilesize _ = error "bad usage of macro prettyfilesize"
 
-listpresskitshots :: [Exp] -> IO [Exp]
-listpresskitshots (Tag (Str "path") (M.toList -> []) (Just [Str fn]):(Tag (Str "suffix") (M.toList -> []) (Just [Str suffix])):[]) = do
-    xs <- getDirectoryContents fn
-    let aux x = take ((length x) - (length suffix)) x
-    return . (map Str) . (map aux) . filter (isSuffixOf suffix) $ xs
-listpresskitshots _ = error "bad usage of macro listpresskitshots"
-
 nestEnv :: Env -> Env -> Env
 nestEnv outer inner = M.union inner outer
 
@@ -172,7 +164,6 @@ funs = M.fromList [
     ("prettyfilesize", strict prettyfilesize),
     ("linkimgs", strict linkimgs),
     ("filesize", strictIO filesize),
-    ("listpresskitshots", strictIO listpresskitshots),
     ("substlist", substlist),
     ("inc", strictIO inc),
     ("rawinc", strictIO rawinc),
