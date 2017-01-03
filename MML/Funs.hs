@@ -123,11 +123,13 @@ substlist ctx@(Ctx tb env funs) evalFun
 substlist _ _ e = error ("bad usage of macro substlist:" ++ (show e))
 
 concatMacro :: [Exp] -> IO [Exp]
-concatMacro xs  | allStrings    = return . (:[]) . Str . concat $ bareStrings
-                | otherwise     = error $ "concat called on LIST with non-STRING element"
+concatMacro [Tag (Str "") (M.toList -> []) (Just xs)]
+    | allStrings    = return . (:[]) . Str . concat $ bareStrings
+    | otherwise     = error $ "concat called on list with non-string element: "
     where
         allStrings  = (foldr (&&) True) . (map isStr) $ xs
         bareStrings = map unwrap1Str xs
+concatMacro _ = error "concat called on non-list"
 
 importscripts :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
 importscripts ctx@(Ctx {ctxMacros = macros}) eval
