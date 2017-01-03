@@ -47,3 +47,7 @@ type MacroFun = MacroFunAux Ctx
 type MacroFuns = MacroFunsAux Ctx
 
 emptyCtx = Ctx [] M.empty M.empty
+
+makeList :: [Exp] -> Exp
+makeList xs = Tag (Str "") M.empty (Just xs)
+
