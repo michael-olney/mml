@@ -119,17 +119,24 @@ nestEnv :: Env -> Env -> Env
 nestEnv outer inner = M.union inner outer
 
 substlist :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
-substlist ctx@(Ctx tb env funs) evalFun ((Tag (Str "list") (M.toList -> []) (Just xs)):(Tag (Str "bind") (M.toList -> []) (Just vnexps)):(Tag (Str "targ") (M.toList -> []) (Just targ)):[]) =
+substlist ctx@(Ctx tb env funs) evalFun
+    (
+        listExp
+        :(Str varname)
+        :(Tag (Str "") (M.toList -> []) (Just targ))
+        :[]
+        ) =
     let
         aux varname item = do
             let env' = nestEnv (M.fromList [(varname, [item])]) env
-            let x = (subst (Ctx tb env' funs)targ)
+            let x = (subst (Ctx tb env' funs) targ)
             evalFun ctx x
     in do
-        varnameExps <- evalFun ctx vnexps
-        (case varnameExps of
-            [Str varname] -> (evalFun ctx xs) >>= concatMapM (aux varname)
-            e -> error ("bad varname in substlist:" ++ (show e))
+        list <- evalFun ctx [listExp]
+        (case list of
+            [Tag (Str "") (M.toList -> []) (Just xs)]
+                -> concatMapM (aux varname) xs
+            _   -> error "expression passed to substlist does not evaluate to a list"
             )
 substlist _ _ e = error ("bad usage of macro substlist:" ++ (show e))
 
