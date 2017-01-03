@@ -14,19 +14,12 @@ import MML.Scripting (runScript)
 import Prelude hiding (readFile)
 import Data.Char
 import Data.List
-import Codec.Picture
-import qualified Vision.Image as V
-import Vision.Primitive.Shape
-import Vision.Image.JuicyPixels
-import Vision.Image.Transform
-import System.IO
-import qualified System.IO.Strict as SIO
 import System.Directory
-import System.FilePath
+import qualified System.IO.Strict as SIO
 import System.Exit
+import System.IO
 import Control.Monad
 import Control.Monad.Extra
-import Codec.Archive.Zip
 import Data.ByteString.Lazy as B (writeFile)
 import qualified Data.Map as M
 import Data.Map ((!))
@@ -80,44 +73,6 @@ subst ctx@(Ctx tb env funs) = auxList
 convThumbChar '/' = '_'
 convThumbChar x = x
 
-resizeFriday w h img = resize Bilinear (ix2 h w) img
-
-resizeJuicy (ImageRGB8 img) w h =
-    ImageRGB8 . toJuicyRGB . (resizeFriday w h) . toFridayRGB $ img
-resizeJuicy (ImageRGBA8 img) w h =
-    ImageRGBA8 . toJuicyRGBA . (resizeFriday w h). toFridayRGBA $ img
-resizeJuicy _ w h = error "unsupported pixel format"
-
-resizesingle :: Exp -> IO Exp
-resizesingle e@(Tag (Str "img") as Nothing) = do
-    let attr = unwrapStr . (as !) . Str
-    let src = attr $ "src"
-    let w::Int = read . attr $ "width"
-    let h::Int = read . attr $ "height"
-    let thumbdst = "gen/"++ (attr "width") ++ "x" ++ (attr "height") ++ (map convThumbChar src) 
-    putStr ("resizing " ++ src ++ "...")
-    (Right img) <- readImage src
-    let resized = resizeJuicy img w h
-    savePngImage thumbdst resized
-    putStr "OK\n"
-
-    -- TODO clean up
-    let as2 = (M.insert (Str "src") [Str thumbdst]) . (M.delete (Str "width")) . (M.delete (Str "height")) $ as
-
-    return (Tag (Str "img") as2 Nothing)
-resizesingle e@(Tag (Str "img") as (Just xs)) = do
-    ys <- resizeimgs xs
-    (Tag (Str "img") as2 Nothing) <- resizesingle (Tag (Str "img") as Nothing)
-    return (Tag (Str "img") as2 (Just ys))
-resizesingle e@(Tag name as Nothing) = return e
-resizesingle (Tag name as (Just x)) = do
-    y <- resizeimgs x
-    return (Tag name as (Just y))
-resizesingle x = return x
-
-resizeimgs :: [Exp] -> IO [Exp]
-resizeimgs = mapM resizesingle
-
 filesize :: [Exp] -> IO [Exp]
 filesize [(Str fn)] = do
     h <- openFile fn ReadMode
@@ -152,7 +107,6 @@ units = [
     ("MB", megabyte),
     ("KB", kilobyte)
     ]
-
 
 prettyfilesize :: [Exp] -> [Exp]
 prettyfilesize [(Str x)] =
@@ -191,35 +145,6 @@ substlist ctx@(Ctx tb env funs) evalFun ((Tag (Str "list") (M.toList -> []) (Jus
             )
 substlist _ _ e = error ("bad usage of macro substlist:" ++ (show e))
 
-dropPath :: Int -> FilePath -> FilePath
-dropPath n = joinPath . (drop n) . splitPath
-
-withEntryPath :: (FilePath -> FilePath) -> Entry -> Entry
-withEntryPath f e = e {eRelativePath = f . eRelativePath $ e}
-
-unwrapJust :: Maybe a -> a
-unwrapJust Nothing = error "unwrap Just failed"
-unwrapJust (Just x) = x
-
-createzip :: [Exp] -> IO [Exp]
-createzip ((Tag (Str "outfilename") (M.toList -> []) (Just [Str outfn])):(Tag (Str "filenames") (M.toList -> []) (Just fs)):(Tag (Str "pathtrim") (M.toList -> []) (Just [Str pathtrimstr])):(Tag (Str "outbase") (M.toList -> []) (Just [Str outbase])):[]) = do
-    putStr ("Creating " ++ outfn ++ "..\n")
-    let (pathtrim::Int) = read pathtrimstr
-    let options = [OptRecursive, OptLocation "" True]
-    archive <- addFilesToArchive options emptyArchive (map unwrap1Str fs) 
-    let fia = filesInArchive archive
-    let es = map (unwrapJust . (\fn -> findEntryByPath fn archive)) fia
-    let es2 = map (withEntryPath (dropPath pathtrim)) es
-    let es3 = map (withEntryPath (outbase </>)) es2
-    let archive2 = foldr addEntryToArchive emptyArchive es3
-    putStr "archive contents:\n"
-    let fia2 = filesInArchive archive2
-    mapM_ (\x -> putStr (x ++ "\n")) fia2
-    let bs = fromArchive archive2
-    B.writeFile outfn bs
-    return []
-createzip e = error ("bad usage of macro createzip: " ++ (show e))
-
 concatMacro :: [Exp] -> IO [Exp]
 concatMacro xs  | allStrings    = return . (:[]) . Str . concat $ bareStrings
                 | otherwise     = error $ "concat called on LIST with non-STRING element"
@@ -244,13 +169,11 @@ strict f ctx eval xs = (eval ctx xs) >>= return . f
 
 funs :: MacroFuns
 funs = M.fromList [
-    ("resizeimgs", strictIO resizeimgs),
     ("prettyfilesize", strict prettyfilesize),
     ("linkimgs", strict linkimgs),
     ("filesize", strictIO filesize),
     ("listpresskitshots", strictIO listpresskitshots),
     ("substlist", substlist),
-    ("createzip", strictIO createzip),
     ("inc", strictIO inc),
     ("rawinc", strictIO rawinc),
     ("concat", strictIO concatMacro),
