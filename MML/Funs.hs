@@ -146,7 +146,7 @@ concatMacro xs  | allStrings    = return . (:[]) . Str . concat $ bareStrings
 
 importscripts :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
 importscripts ctx@(Ctx {ctxMacros = macros}) eval
-    ((Tag (Str "scripts") _ (Just nameexps)):exps) = do
+    ((Tag (Str "") _ (Just nameexps)):(Tag (Str "") _ (Just exps)):[]) = do
     nameexps2 <- eval ctx nameexps
     let names = map unwrap1Str nameexps2
     let addScript macros name =
