@@ -1,5 +1,6 @@
 - Update all macros to use new data type conventions
 - Build macros for building new macros
+- Add Haddock docs for scripting interface
 - Fix unit testing: detect exceptions
 - Add tests for evaluation, traceback
 - Add traceback to Tags in Exp
