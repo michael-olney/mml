@@ -1,3 +1,5 @@
+- Update all macros to use new data type conventions
+- Build macros for building new macros
 - Fix unit testing: detect exceptions
 - Add tests for evaluation, traceback
 - Add traceback to Tags in Exp
@@ -6,4 +8,3 @@
 - Introduce code escaping mode
 - Reader macros
 - Make all symbol imports explicit (whitelist)
-- Build macros for building new macros
