@@ -5,11 +5,10 @@ module MML.Binary (putExps, putExp, getExps, getExp) where
 import Data.Binary (put, get, Binary, Get, Put)
 import MML.Types
 import Data.Word
-import Data.ByteString.Lazy (ByteString)
+import Data.ByteString.Lazy (ByteString, pack, unpack)
 import qualified Data.ByteString.Lazy.UTF8 as UTF8
 import qualified Data.Map as M
-
-import Debug.Trace
+import Control.Monad
 
 putExp :: Exp -> Put
 putExp = put
@@ -17,10 +16,10 @@ putExp = put
 getExp :: Get Exp
 getExp = get
 
-putUTF8 xs = do
-    put ((fromIntegral . length $ xs)::Word32)
-    put . UTF8.fromString $ xs
+putUTF8 :: String -> Put
+putUTF8 = (putList put) . unpack . UTF8.fromString
 
+putList :: Binary a => (a -> Put) -> [a] -> Put
 putList f xs = do
     put ((fromIntegral . length $ xs)::Word32)
     mapM_ f xs
@@ -49,10 +48,7 @@ getAttr = do
 
 getAttrMap = getList getAttr >>= return . M.fromList
 
-getUTF8 = do
-    (count::Word32) <- get
-    (bs::ByteString) <- get
-    return . UTF8.toString $ bs
+getUTF8 = getList get >>= return . UTF8.toString . pack
 
 getExpWithType 0 = do
     name <- get
