@@ -64,10 +64,7 @@ getExpWithType 1 = do
     attrmap <- getAttrMap
     return $ Tag name attrmap Nothing
 getExpWithType 2 = getUTF8 >>= return . Str
-getExpWithType 3 = do
-    name <- get
-    es <- getExps
-    return $ Call (TracebackRecord "" 0 0 "") name es
+getExpWithType 3 = fail "macro calls cannot be received over scripting interface"
 getExpWithType 4 = getUTF8 >>= return . Var
 getExpWithType x = fail $ "getExpWithType: " ++ (show x)
 
@@ -84,10 +81,7 @@ instance Binary Exp where
     put (Str xs) = do
         put (2::Word32)
         putUTF8 xs
-    put (Call tbr name es) = do
-        put (3::Word32)
-        put name
-        putExps es
+    put (Call tbr name es) = fail "macro calls cannot be sent over scripting interface"
     put (Var name) = do
         put (4::Word32)
         putUTF8 name
