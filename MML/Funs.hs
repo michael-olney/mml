@@ -110,9 +110,8 @@ foreach ctx@(Ctx tb env funs) evalFun
         ) =
     let
         aux varname item = do
-            let env' = nestEnv (M.fromList [(varname, [item])]) env
-            let x = (subst (Ctx tb env' funs) targ)
-            evalFun ctx x
+            let env2 = nestEnv (M.fromList [(varname, [item])]) env
+            evalFun (Ctx tb env2 funs) targ
     in do
         list <- evalFun ctx [listExp]
         (case list of
