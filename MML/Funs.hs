@@ -100,8 +100,8 @@ prettyfilesize _ = error "bad usage of macro prettyfilesize"
 nestEnv :: Env -> Env -> Env
 nestEnv outer inner = M.union inner outer
 
-substlist :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
-substlist ctx@(Ctx tb env funs) evalFun
+foreach :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
+foreach ctx@(Ctx tb env funs) evalFun
     (
         listExp
         :(Str varname)
@@ -118,9 +118,9 @@ substlist ctx@(Ctx tb env funs) evalFun
         (case list of
             [Tag (Str "") (M.toList -> []) (Just xs)]
                 -> concatMapM (aux varname) xs
-            _   -> error "expression passed to substlist does not evaluate to a list"
+            _   -> error "expression passed to foreach does not evaluate to a list"
             )
-substlist _ _ e = error ("bad usage of macro substlist:" ++ (show e))
+foreach _ _ e = error ("bad usage of macro foreach:" ++ (show e))
 
 concatMacro :: [Exp] -> IO [Exp]
 concatMacro [Tag (Str "") (M.toList -> []) (Just xs)]
@@ -150,7 +150,7 @@ funs :: MacroFuns
 funs = M.fromList [
     ("prettyfilesize", strict prettyfilesize),
     ("filesize", strictIO filesize),
-    ("substlist", substlist),
+    ("foreach", foreach),
     ("inc", strictIO inc),
     ("rawinc", strictIO rawinc),
     ("concat", strictIO concatMacro),
