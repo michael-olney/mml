@@ -1,6 +1,6 @@
 name:               mml
 version:            0.1.0
-synopsis:           Haskell implementation of the Macroing Markup Language.
+synopsis:           Haskell implementation of the Minimal Markup Language.
 -- description:
 homepage:           http://github.com/michael-olney/mml
 license:            BSD2
