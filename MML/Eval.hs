@@ -67,4 +67,6 @@ runExp ctx (Tag _ as cs)            =
 runExp ctx c@(Str _)                                = return [c]
 
 eval :: Ctx -> Doc -> IO Doc
-eval ctx cs = runExps ctx cs
+eval ctx cs = do
+    cs2 <- runExps ctx cs
+    if cs2 /= cs then eval ctx cs2 else return cs2
