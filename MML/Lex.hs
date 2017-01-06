@@ -65,14 +65,14 @@ rawToken = do
         pos <- getPosition
         oneOf whitespace
         return . (, pos) $ TSpace Nothing
-    <|> brace "<%"  BTCall      BDOpen  BVSpecialLike
-    <|> brace "<$"  BTVar       BDOpen  BVSpecialLike
-    <|> brace "<"   BTTag       BDOpen  BVSpecialLike
-    <|> brace ">"   BTUnknown   BDClose BVSpecialLike
-    <|> brace "{%"  BTCall      BDOpen  BVCharLike
-    <|> brace "{$"  BTVar       BDOpen  BVCharLike
-    <|> brace "{"   BTTag       BDOpen  BVCharLike
-    <|> brace "}"   BTUnknown   BDClose BVCharLike
+    <|> brace "{%"  BTCall      BDOpen  BVSpecialLike
+    <|> brace "{$"  BTVar       BDOpen  BVSpecialLike
+    <|> brace "{"   BTTag       BDOpen  BVSpecialLike
+    <|> brace "}"   BTUnknown   BDClose BVSpecialLike
+    <|> brace "<%"  BTCall      BDOpen  BVCharLike
+    <|> brace "<$"  BTVar       BDOpen  BVCharLike
+    <|> brace "<"   BTTag       BDOpen  BVCharLike
+    <|> brace ">"   BTUnknown   BDClose BVCharLike
     <|> single "^"  TEmptyStr
     <|> single "~"  TStrSep
     <|> single ":"  TSplit

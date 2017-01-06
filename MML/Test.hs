@@ -51,42 +51,42 @@ roundTripTest e = roundTripTestFun e (==)
 binaryTest exps =
     TestCase (assertEqual "" exps ((runGet getExps) . runPut . putExps $ exps))
 
-basic0 = parseEqTest "<a>" ([Tag (Str "a") (M.empty) Nothing])
-basic1 = parseEqTest "<a<x:y>>" ([
+basic0 = parseEqTest "{a}" ([Tag (Str "a") (M.empty) Nothing])
+basic1 = parseEqTest "{a{x:y}}" ([
     Tag (Str "a") (M.fromList [(Str "x", [Str "y"])]) Nothing])
-basic2 = parseEqTest "<a<x:y><p:q>>" ([
+basic2 = parseEqTest "{a{x:y}{p:q}}" ([
     Tag (Str "a") (M.fromList [(Str "x", [Str "y"]), (Str "p", [Str "q"])]) Nothing])
-basic3 = parseEqTest "<a<x:y><p:q>:>" ([
+basic3 = parseEqTest "{a{x:y}{p:q}:}" ([
     Tag (Str "a") (M.fromList [(Str "x", [Str "y"]), (Str "p", [Str "q"])]) (Just [])])
-basic4 = parseEqTest "<a<x:y><p:q>:a>" ([
+basic4 = parseEqTest "{a{x:y}{p:q}:a}" ([
     Tag (Str "a") (M.fromList [(Str "x", [Str "y"]), (Str "p", [Str "q"])]) (Just [
         Str "a"
     ])])
-basic5 = parseEqTest "<a<x:y><p:q>:a<b>>" ([
+basic5 = parseEqTest "{a{x:y}{p:q}:a{b}}" ([
     Tag (Str "a") (M.fromList [(Str "x", [Str "y"]), (Str "p", [Str "q"])]) (Just [
         Str "a", Tag (Str "b") (M.empty) Nothing
     ])])
-basic6 = parseEqTest "<a<x:y><p:q>:a<b>c>" ([
+basic6 = parseEqTest "{a{x:y}{p:q}:a{b}c}" ([
     Tag (Str "a") (M.fromList [(Str "x", [Str "y"]), (Str "p", [Str "q"])]) (Just [
         Str "a", Tag (Str "b") M.empty Nothing, Str "c"
     ])])
-basic7 = parseEqTest "<(--a<--b):\\>><\\ :\\>>:a\\<b\\>c>" ([
-    Tag (Str "(--a") (M.fromList [(Str "--b)", [Str ">"]), (Str " ", [Str ">"])]) (Just [
-        Str "a<b>c"
+basic7 = parseEqTest "{(--a{--b):\\}}{\\ :\\}}:a\\{b\\}c}" ([
+    Tag (Str "(--a") (M.fromList [(Str "--b)", [Str "}"]), (Str " ", [Str "}"])]) (Just [
+        Str "a{b}c"
     ])])
-basic8 = parseEqTest "<$a>" [Var "a"]
-basic9 = parseEqTest "<$^>" [Var ""]
-basic10 = parseEqTest "<$testing>" [Var "testing"]
+basic8 = parseEqTest "{$a}" [Var "a"]
+basic9 = parseEqTest "{$^}" [Var ""]
+basic10 = parseEqTest "{$testing}" [Var "testing"]
 basic11 = parseEqTest "1. This is a  test" [Str "1. This is a test"]
-basic12 = parseEqTest "<t:a b>" [Tag (Str "t") M.empty (Just [Str "a b"])]
+basic12 = parseEqTest "{t:a b}" [Tag (Str "t") M.empty (Just [Str "a b"])]
 
-reject0 = parseRejectTest "<"
-reject1 = parseRejectTest ">"
+reject0 = parseRejectTest "{"
+reject1 = parseRejectTest "}"
 reject2 = parseRejectTest ":"
-reject3 = parseRejectTest "<>>"
-reject4 = parseRejectTest "<<<>>"
-reject5 = parseRejectTest "<:>"
-reject6 = parseRejectTest "<a::>"
+reject3 = parseRejectTest "{}}"
+reject4 = parseRejectTest "{{{}}"
+reject5 = parseRejectTest "{:}"
+reject6 = parseRejectTest "{a::}"
 reject7 = parseRejectTest "a\\"
 
 space0 = parseEqTest " a " ([Str "a"])
@@ -96,11 +96,11 @@ space3 = parseEqTest " a   b   " ([Str "a b"])
 space4 = parseEqTest "    a   b   " ([Str "a b"])
 space5 = parseEqTest "    a  \\ b   " ([Str "a b"])
 space6 = parseEqTest "    a \\  b   " ([Str "a b"])
-space7 = parseEqTest "    a \\ <x> b   " ([
+space7 = parseEqTest "    a \\ {x} b   " ([
     Str "a ", Tag (Str "x") M.empty Nothing, Str "b"])
-space8 = parseEqTest "\\    a \\ <x> b   " ([
+space8 = parseEqTest "\\    a \\ {x} b   " ([
     Str " a ", Tag (Str "x") M.empty Nothing, Str "b"])
-space9 = parseEqTest "\\ \\\\   a \\ <x> b   " ([
+space9 = parseEqTest "\\ \\\\   a \\ {x} b   " ([
     Str " \\ a ", Tag (Str "x") M.empty Nothing, Str "b"])
 space10 = parseEqTest "a\\ " ([Str "a "])
 
@@ -114,7 +114,7 @@ roundtrip5 = roundTripTest [
         (Just [Str "b ", Tag (Str "c") M.empty Nothing, Str " d "])
     ]
 roundtrip6 = roundTripTest [
-        Tag (Str " a\\") (M.fromList [(Str ">", [Str " <\\ "])])
+        Tag (Str " a\\") (M.fromList [(Str "}", [Str " {\\ "])])
         (Just [Str "b ", Tag (Str "\\c ") M.empty Nothing, Str " d "])
     ]
 roundtrip7 = roundTripTest[
@@ -131,12 +131,12 @@ stringsep0 = parseEqTest " a ~ b " [Str "a", Str "b"]
 stringsep1 = parseRejectTest " a ~~ b "
 stringsep2 = parseRejectTest "~a"
 
-tokenize0 = tokenizeEqTest " <%> " [
+tokenize0 = tokenizeEqTest " {%} " [
         TBrace BTCall BDOpen BVSpecialLike,
         TBrace BTUnknown BDClose BVSpecialLike,
         TEOF
         ]
-tokenize1 = tokenizeEqTest " {%}> " [
+tokenize1 = tokenizeEqTest " <%>} " [
         TBrace BTCall BDOpen BVCharLike,
         TBrace BTUnknown BDClose BVCharLike,
         TBrace BTUnknown BDClose BVSpecialLike,
@@ -146,12 +146,12 @@ tokenize2 = tokenizeEqTest " ^ " [
         TEmptyStr,
         TEOF
         ]
-tokenize3 = tokenizeEqTest "{$}" [
+tokenize3 = tokenizeEqTest "<$>" [
         TBrace BTVar BDOpen BVCharLike,
         TBrace BTUnknown BDClose BVCharLike,
         TEOF
         ]
-tokenize4 = tokenizeEqTest "<$>" [
+tokenize4 = tokenizeEqTest "{$}" [
         TBrace BTVar BDOpen BVSpecialLike,
         TBrace BTUnknown BDClose BVSpecialLike,
         TEOF
@@ -164,8 +164,8 @@ tokenize6 = tokenizeEqTest " : " [
         TSplit,
         TEOF
         ]
-tokenize7 = tokenizeEqTest "\\>" [
-        TChar '>',
+tokenize7 = tokenizeEqTest "\\}" [
+        TChar '}',
         TEOF
         ]
 tokenize8 = tokenizeEqTest "\\\\" [
@@ -203,28 +203,28 @@ tokenize13 = tokenizeEqTest " a \\ \\ b " [
         TChar 'b',
         TEOF
         ]
-tokenize14 = tokenizeEqTest " { \\ \\ } " [
+tokenize14 = tokenizeEqTest " < \\ \\ > " [
         TBrace BTTag BDOpen BVCharLike,
         TSpace (Just ' '),
         TSpace (Just ' '),
         TBrace BTUnknown BDClose BVCharLike,
         TEOF
         ]
-tokenize15 = tokenizeEqTest " {$ \\ \\ } " [
+tokenize15 = tokenizeEqTest " <$ \\ \\ > " [
         TBrace BTVar BDOpen BVCharLike,
         TSpace (Just ' '),
         TSpace (Just ' '),
         TBrace BTUnknown BDClose BVCharLike,
         TEOF
         ]
-tokenize16 = tokenizeEqTest " {% \\ \\ } " [
+tokenize16 = tokenizeEqTest " <% \\ \\ > " [
         TBrace BTCall BDOpen BVCharLike,
         TSpace (Just ' '),
         TSpace (Just ' '),
         TBrace BTUnknown BDClose BVCharLike,
         TEOF
         ]
-tokenize17 = tokenizeEqTest "<t:a b>" [
+tokenize17 = tokenizeEqTest "{t:a b}" [
         TBrace BTTag BDOpen BVSpecialLike,
         TChar 't',
         TSplit,
@@ -234,7 +234,7 @@ tokenize17 = tokenizeEqTest "<t:a b>" [
         TBrace BTUnknown BDClose BVSpecialLike,
         TEOF
         ]
-tokenize18 = tokenizeEqTest "<t:a b >" [
+tokenize18 = tokenizeEqTest "{t:a b }" [
         TBrace BTTag BDOpen BVSpecialLike,
         TChar 't',
         TSplit,
@@ -244,7 +244,7 @@ tokenize18 = tokenizeEqTest "<t:a b >" [
         TBrace BTUnknown BDClose BVSpecialLike,
         TEOF
         ]
-tokenize19 = tokenizeEqTest "{t:a b \n }  c" [
+tokenize19 = tokenizeEqTest "<t:a b \n >  c" [
         TBrace BTTag BDOpen BVCharLike,
         TChar 't',
         TSplit,
