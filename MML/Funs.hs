@@ -180,12 +180,14 @@ def ctx@(Ctx tb env macros) evalFun
         :[]
         ) =
     let
-        macros2 = add macros macroname macro
-        macro ctx eval es =
-            let env2 = nestEnv (M.fromList [(paramname, es)]) env
-            in evalFun (Ctx tb env2 macros2) bodyexps
+        macro ctx@(Ctx _ env macros) evalFun es =
+            let env2 = nestEnv env (M.fromList [(paramname, es)])
+            in do
+                let macros2 = add macros macroname macro
+                evalFun (Ctx tb env2 macros2) bodyexps
         add macros name macro = M.insert name macro macros
-    in
+    in do
+        let macros2 = add macros macroname macro
         evalFun (Ctx tb env macros2) inexps
 def _ _ e = error "bad usage of macro def"
 
