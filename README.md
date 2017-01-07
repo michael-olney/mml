@@ -88,6 +88,18 @@ Important: the HTML output module is a simple placeholder, and
 is not safe! For example, it will not handle script tags
 correctly.
 
+[Here][2] is a page built using MML. It uses the *foreach*
+macro and some external scripts to generate thumbnails from a
+directory pf images and place them into a grid. The scripting
+interface is not yet documented, but uses a binary format to
+exchange abstract syntax without any of the complications of
+concrete syntax, e.g. whitespace, special characters, etc.
+Support for a new language then consists in a small library
+written for that language to serialize and deserialize
+expressions. This allows all the libraries from the new
+language (e.g. image processing libraries, as in the linked
+page) to be brought into the processing of the markup.
+
 [1]: http://www.schnada.de/grapt/eriknaggum-enamel.html
 [2]: https://spectralforms.com/astrofuse/presskit/
 [3]: https://hackage.haskell.org/package/parsec
