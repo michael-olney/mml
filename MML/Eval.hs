@@ -54,7 +54,7 @@ runExp ctx@(Ctx tb env funs) (Var name)
 runExp ctx@(Ctx ctxtb env funs) (Call calltb nameexp cs)  = do
     let newCtx = (Ctx (calltb:ctxtb) env funs)
     name <- mustString ctx "macro name must be STRING" nameexp
-    runMacro runExps newCtx name cs
+    runMacro eval newCtx name cs
 runExp ctx@(Ctx tb env funs) (Tag name as cs) = do
     name' <- runExp ctx name >>= mustSingle ctx "tag name found to be non-singular during evaluation"
     cs' <- runOptExps ctx cs
