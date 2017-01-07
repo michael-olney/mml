@@ -158,7 +158,7 @@ caseMacro ctx@(Ctx tb env macros) evalFun
                     xs2 <- evalFun ctx xs
                     (case matchExps pat xs2 M.empty of
                         (Just inner)
-                            -> evalFun (Ctx tb (nestEnv inner env) macros) pbody
+                            -> evalFun (Ctx tb (nestEnv env inner) macros) pbody
                         Nothing
                             -> aux ps
                         )
@@ -195,7 +195,7 @@ foreach ctx@(Ctx tb env funs) evalFun
         ) =
     let
         aux varname item = do
-            let env2 = nestEnv (M.fromList [(varname, [item])]) env
+            let env2 = nestEnv env (M.fromList [(varname, [item])])
             evalFun (Ctx tb env2 funs) targ
     in do
         list <- evalFun ctx [listExp]
