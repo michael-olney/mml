@@ -22,6 +22,7 @@ import Control.Monad.Extra
 import Data.ByteString.Lazy as B (writeFile)
 import qualified Data.Map as M
 import Data.Map ((!))
+import Data.List (splitAt)
 
 convParam (Tag (Str name) (M.toList -> []) (Just v)) = (name, v)
 convParam (Tag _ (M.toList -> []) _)        = error "shouldn't see this"
@@ -94,11 +95,95 @@ prettyfilesize [(Str x)] =
             True -> (show (v `div` unitv)) ++ units
             False -> aux xs)
     in
-        [Str (aux units)] 
+        [Str (aux units)]
 prettyfilesize _ = error "bad usage of macro prettyfilesize"
 
 nestEnv :: Env -> Env -> Env
 nestEnv outer inner = M.union inner outer
+
+caseMacro :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
+caseMacro ctx@(Ctx tb env macros) evalFun
+    (
+        (Tag (Str "") (M.toList -> []) (Just xs))
+        :ps
+        ) =
+    let
+        newConstr v e constrs
+            = if M.member v constrs
+                then if constrs ! v == e
+                    then return constrs
+                    else fail "unification failure"
+                else
+                    return $ M.insert v e constrs
+
+        match (Tag n0 a0 (Just e0)) (Tag n1 a1 (Just e1))   constrs
+            = match n0 n1 constrs
+                >>= matchAttrs a0 a1
+                >>= matchExps e0 e1
+        match (Str x)               (Str y)                 constrs
+            | x == y = return constrs
+            | x /= y = fail "string mismatch"
+        match (Call _ _ _)          _                       constrs
+            = error "macro call on LHS in pattern match"
+        match _                     (Call _ _ _)            constrs
+            = error "macro call on RHS in pattern match"
+        match _                     (Var _)                 constrs
+            = error "variable on RHS in pattern match"
+        match (Var v)               e                       constrs
+            = newConstr v [e] constrs
+
+        matchPair constrs (e0, e1) = match e0 e1 constrs
+
+        matchExps e0 e1 constrs
+            | length e0 == length e1
+                = foldM matchPair constrs $ zip e0 e1
+            | length e0 < length e1 && length e0 > 0
+                = do
+                    let (pref1, suff1) = splitAt (length e0 - 1) e1
+                    let pref0 = take (length e0 - 1) e0
+                    let var0 = last e0
+                    constrs2 <- foldM matchPair constrs $ zip pref0 pref1
+                    (case var0 of
+                        (Var v)     -> newConstr v suff1 constrs2
+                        _           -> fail "pattern match failed in list"
+                        )
+            | otherwise
+                = fail "pattern match failed in list"
+
+        matchAttrs = fail "attribute pattern matching not yet implemented"
+
+        aux ((Tag (Str "") (M.toList -> []) (Just pat)):
+            (Tag (Str "") (M.toList -> []) (Just pbody))
+            :ps)= do
+                    xs2 <- evalFun ctx xs
+                    (case matchExps pat xs2 M.empty of
+                        (Just inner)
+                            -> evalFun (Ctx tb (nestEnv inner env) macros) pbody
+                        Nothing
+                            -> aux ps
+                        )
+        aux []  = fail "pattern match exhausted"
+        aux _   = fail "pattern or pattern body missing"
+    in
+        aux ps
+
+def :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
+def ctx@(Ctx tb env macros) evalFun
+    (
+        (Str macroname)
+        :(Str paramname)
+        :(Tag (Str "") (M.toList -> []) (Just bodyexps))
+        :(Tag (Str "") (M.toList -> []) (Just inexps))
+        :[]
+        ) =
+    let
+        macros2 = add macros macroname macro
+        macro ctx eval es =
+            let env2 = nestEnv (M.fromList [(paramname, es)]) env
+            in evalFun (Ctx tb env2 macros2) bodyexps
+        add macros name macro = M.insert name macro macros
+    in
+        evalFun (Ctx tb env macros2) inexps
 
 foreach :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
 foreach ctx@(Ctx tb env funs) evalFun
@@ -149,6 +234,8 @@ funs :: MacroFuns
 funs = M.fromList [
     ("prettyfilesize", strict prettyfilesize),
     ("filesize", strictIO filesize),
+    ("def", def),
+    ("case", caseMacro),
     ("foreach", foreach),
     ("inc", strictIO inc),
     ("rawinc", strictIO rawinc),
