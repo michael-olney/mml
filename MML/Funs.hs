@@ -152,9 +152,11 @@ caseMacro ctx@(Ctx tb env macros) evalFun
 
         matchAttrs = fail "attribute pattern matching not yet implemented"
 
-        aux ((Tag (Str "") (M.toList -> []) (Just pat)):
-            (Tag (Str "") (M.toList -> []) (Just pbody))
-            :ps)= do
+        aux (
+                (Tag (Str "") (M.toList -> []) (Just pat)):
+                (Tag (Str "") (M.toList -> []) (Just pbody))
+                :ps
+                )   = do
                     xs2 <- evalFun ctx xs
                     (case matchExps pat xs2 M.empty of
                         (Just inner)
