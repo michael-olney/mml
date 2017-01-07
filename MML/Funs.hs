@@ -127,8 +127,8 @@ caseMacro ctx@(Ctx tb env macros) evalFun
             = error "macro call on LHS in pattern match"
         match _                     (Call _ _ _)            constrs
             = error "macro call on RHS in pattern match"
-        match _                     (Var _)                 constrs
-            = error "variable on RHS in pattern match"
+        match _                     (Var v)                 constrs
+            = error $ "variable on RHS in pattern match: " ++ (show v)
         match (Var v)               e                       constrs
             = newConstr v [e] constrs
 
@@ -166,6 +166,7 @@ caseMacro ctx@(Ctx tb env macros) evalFun
         aux _   = fail "pattern or pattern body missing"
     in
         aux ps
+caseMacro _ _ e = error "bad usage of macro case"
 
 def :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
 def ctx@(Ctx tb env macros) evalFun
@@ -184,6 +185,7 @@ def ctx@(Ctx tb env macros) evalFun
         add macros name macro = M.insert name macro macros
     in
         evalFun (Ctx tb env macros2) inexps
+def _ _ e = error "bad usage of macro def"
 
 foreach :: Ctx -> (Ctx -> [Exp] -> IO [Exp]) -> [Exp] -> IO [Exp]
 foreach ctx@(Ctx tb env funs) evalFun
