@@ -2,10 +2,15 @@ module Main where
 
 import MML
 import MML.Funs
+import MML.JSON
 import System.IO
 import System.Environment
 import System.FilePath.Posix
 import qualified Data.Map as M
+import qualified Data.ByteString.Lazy as BS
+
+data Format = HTML | JSON
+    deriving (Eq, Ord, Show)
 
 must :: Bool -> String -> IO ()
 must False xs   = error xs
@@ -30,8 +35,7 @@ main = do
             )
     doc2 <- eval (Ctx [] M.empty funs) doc
 
-    (hPutStr oh) . toHTML $ doc2
-    hPutStr oh "\n"
+    (hPutStrLn oh) . toHTML $ doc2
 
     hClose oh
     hClose ih
