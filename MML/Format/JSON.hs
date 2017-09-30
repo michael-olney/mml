@@ -1,13 +1,14 @@
-module MML.JSON (toJSON, fromJSON) where
+module MML.Format.JSON (toJSON, fromJSON) where
 
 import MML.Types
 
 import Data.Aeson.Types (Value(..))
 import qualified Data.Aeson.Types as Aeson
-import Data.Aeson.Encode
+import Data.Aeson (encode)
 
 import qualified Data.Text as Txt
 import qualified Data.Vector as Vec
+import qualified Data.ByteString.Lazy as BS
 
 import qualified Data.HashMap.Lazy as H
 import qualified Data.Map as M
@@ -41,6 +42,7 @@ expToAeson (Str exp) =
     Aeson.String . Txt.pack $ exp
 expToAeson _ = error "unsupported expression type"
 
-toJSON = encode . expsToAeson
+toJSON :: Doc -> IO (Either String BS.ByteString)
+toJSON = return . Right . encode . expsToAeson
 
-fromJSON = error "unimplemented"
+fromJSON = error "conversion from JSON not yet implemented"

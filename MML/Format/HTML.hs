@@ -1,15 +1,22 @@
-module MML.HTML (toHTML) where
+module MML.Format.HTML (toHTML, fromHTML) where
 
 import MML.Types
 import Data.Char
 import Data.List
 import qualified Data.Map as M
+import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString.Lazy.UTF8 as UTF8 (fromString)
 
 header = "<!DOCTYPE HTML>"
 footer = ""
 
-toHTML :: Doc -> String
-toHTML cs = header ++ (convExps cs) ++ footer
+toHTML :: Doc -> IO (Either String BS.ByteString)
+toHTML doc = do
+    let str = header ++ (convExps doc) ++ footer
+    return . Right . UTF8.fromString $ str
+
+fromHTML :: String -> Doc
+fromHTML = error "conversion from HTML not yet supported"
 
 -- Intended to be just enough to cover both
 -- character data and double-quoted attribute values
