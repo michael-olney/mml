@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, TupleSections #-}
+{-# LANGUAGE FlexibleContexts, TupleSections, DeriveDataTypeable #-}
 
 module MML.Lex (
     tokenize,
@@ -10,14 +10,14 @@ module MML.Lex (
     ) where
 
 import Prelude hiding (exp)
+
 import Text.ParserCombinators.Parsec hiding (parse, tokens)
 import qualified Text.ParserCombinators.Parsec as P
 import Text.ParserCombinators.Parsec.Prim hiding (parse, tokens)
 import Control.Monad
-import Data.List
-import Debug.Trace
 
-import MML.Eval
+import Data.Data
+import Data.List
 
 tokenize :: String -> String -> IO (Either String [TokenPos])
 tokenize name mml = let
@@ -29,13 +29,13 @@ tokenize name mml = let
             )
 
 data BraceVariant = BVSpecialLike | BVCharLike
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Data)
 data BraceDir = BDOpen | BDClose
-    deriving (Show, Eq, Ord)
-data BraceType = BTTag | BTCall | BTVar | BTUnknown
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Data)
+data BraceType = BTTag | BTUnknown
+    deriving (Show, Eq, Ord, Data)
 data SpaceType = STBare | STEscaped
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Data)
 
 data Token =
     TChar Char
@@ -45,7 +45,7 @@ data Token =
     | TStrSep
     | TSplit
     | TEOF
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Data)
 
 type TokenPos = (Token, SourcePos)
 
@@ -65,12 +65,8 @@ rawToken = do
         pos <- getPosition
         oneOf whitespace
         return . (, pos) $ TSpace Nothing
-    <|> brace "{%"  BTCall      BDOpen  BVSpecialLike
-    <|> brace "{$"  BTVar       BDOpen  BVSpecialLike
     <|> brace "{"   BTTag       BDOpen  BVSpecialLike
     <|> brace "}"   BTUnknown   BDClose BVSpecialLike
-    <|> brace "<%"  BTCall      BDOpen  BVCharLike
-    <|> brace "<$"  BTVar       BDOpen  BVCharLike
     <|> brace "<"   BTTag       BDOpen  BVCharLike
     <|> brace ">"   BTUnknown   BDClose BVCharLike
     <|> single "^"  TEmptyStr

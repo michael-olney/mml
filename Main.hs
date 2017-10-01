@@ -3,7 +3,6 @@
 module Main where
 
 import MML
-import MML.Funs
 
 import MML.Format
 import MML.Format.JSON

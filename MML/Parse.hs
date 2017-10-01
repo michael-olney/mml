@@ -2,20 +2,30 @@
 
 module MML.Parse (parse) where
 
+import MML.Types
+import MML.Lex
+
 import Prelude hiding (exp)
+
 import Text.Parsec (Parsec)
 import Text.ParserCombinators.Parsec hiding (parse, token, tokens, Parser)
 import qualified Text.ParserCombinators.Parsec as P
 import Text.ParserCombinators.Parsec.Prim hiding (parse, token, tokens, Parser)
+
 import Control.Monad
+
 import Data.List
-import Debug.Trace
 import qualified Data.Map as M
 
-import MML.Types
-import MML.Lex
-
 type Parser a = Parsec [TokenPos] () a
+
+traceback :: Parser SourceLoc
+traceback = do
+    sp <- sourcePos <?> "source position"
+    let name = sourceName sp
+    let line = sourceLine sp
+    let col = sourceColumn sp
+    return $ (SourceLoc name line col)
 
 parse :: String -> String -> IO (Either String Doc)
 parse name mml = do
@@ -49,13 +59,13 @@ exp =
         r <- str
         optional $ token (== TStrSep)
         return r
-    <|> (call <|> var <|> tag)
+    <|> tag
 
 exps :: Parser [Exp]
 exps = many exp
 
-matchTagBrace (TBrace BTTag BDOpen bv) = True
-matchTagBrace _                        = False
+matchTagBrace (TBrace BTTag BDOpen bv_ )    = True
+matchTagBrace _                             = False
 
 attr :: Parser (Exp, [Exp])
 attr = do
@@ -69,55 +79,17 @@ attr = do
 sourcePos :: Parser SourcePos
 sourcePos = liftM statePos getParserState
 
-traceback :: String -> Parser TracebackRecord
-traceback macroname = do
-    sp <- sourcePos <?> "source position"
-    let name = sourceName sp
-    let line = sourceLine sp
-    let col = sourceColumn sp
-    return $ (TracebackRecord name line col macroname)
-
-applyStrOr :: (String -> Parser a) -> (Exp -> Parser a) -> Parser a
-applyStrOr f alt = do
-    x <- exp
-    (case x of
-        (Str str)   -> f str
-        x           -> alt x
-        )
-
-matchVarBrace (TBrace BTVar BDOpen bv)  = True
-matchVarBrace _                         = False
-
-var :: Parser Exp
-var = do
-    (TBrace BTVar BDOpen bv) <- token matchVarBrace
-    (Str name) <- applyStrOr (return . Str) (fail "variable name must be STRING")
-    token (== (TBrace BTUnknown BDClose bv))
-    return . Var $ name
-
-matchCallBrace (TBrace BTCall BDOpen bv)    = True
-matchCallBrace _                            = False
-
-call :: Parser Exp
-call = do
-    (TBrace BTCall BDOpen bv) <- token matchCallBrace
-    let s = "<unknown macro>"
-    (tb, name) <- applyStrOr
-        (\e -> traceback e >>= return . \x -> (x, Str e))
-        (\e -> traceback s >>= return . \x -> (x, e))
-    token (== TSplit) <?> "call split"
-    cs <- exps
-    token (== (TBrace BTUnknown BDClose bv))
-    return (Call tb name cs)
-
 tag :: Parser Exp
 tag = do
+    tb <- traceback
+
     (TBrace BTTag BDOpen bv) <- token matchTagBrace
     name <- exp
     attrs <- many attr >>= return . M.fromList
     exp <- optionMaybe tagExps
     token (== (TBrace BTUnknown BDClose bv))
-    return (Tag name attrs exp)
+
+    return (Tag name attrs exp tb)
 
 tagExps :: Parser [Exp]
 tagExps = do
@@ -148,7 +120,11 @@ strChar =
 str :: Parser Exp
 str =
     do
+        tb <- traceback
         token (== TEmptyStr)
-        return . Str $ ""
-    <|> (many1 strChar >>= return . Str)
+        return $ Str "" tb
+    <|> do
+        tb <- traceback
+        cs <- many1 strChar
+        return $ Str cs tb
 

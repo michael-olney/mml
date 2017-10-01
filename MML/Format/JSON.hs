@@ -32,13 +32,21 @@ attrsToAeson = Aeson.Object . H.fromList . (L.map attrToAeson) . M.toList
 childrenToAeson Nothing = Null
 childrenToAeson (Just cs) = Aeson.Array . Vec.fromList . expsToAeson $ cs
 
-expToAeson (Tag name attrs children) =
+sourceLocToAeson (SourceLoc loc lineno col) =
+    Aeson.Object . H.fromList $ [
+        (Txt.pack $ "loc", Aeson.String . Txt.pack $ loc),
+        (Txt.pack $ "lineno", Aeson.Number . fromIntegral $ lineno),
+        (Txt.pack $ "col", Aeson.Number . fromIntegral $ col)
+        ]
+
+expToAeson (Tag name attrs children srcloc) =
     Aeson.Object . H.fromList $ [
         (Txt.pack "name", unwrap1StrAeson name),
         (Txt.pack "attrs", attrsToAeson attrs),
-        (Txt.pack "children", childrenToAeson children)
+        (Txt.pack "children", childrenToAeson children),
+        (Txt.pack "sourceloc", sourceLocToAeson srcloc)
     ]
-expToAeson (Str exp) =
+expToAeson (Str exp tb) =
     Aeson.String . Txt.pack $ exp
 expToAeson _ = error "unsupported expression type"
 

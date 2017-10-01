@@ -46,12 +46,12 @@ convExps = foldl (\s c -> s ++ (conv c)) ""
 
 -- TODO escape names..
 convAttrAux :: String -> [Exp] -> String
-convAttrAux name [Str val] = name ++ "=\"" ++ (escape val) ++ "\""
+convAttrAux name [Str val _] = name ++ "=\"" ++ (escape val) ++ "\""
 convAttrAux name [] = error "attribute values must not be empty"
 convAttrAux name xs@(_:_) = error ("attribute values must resolve to single value: " ++ (show xs))
 
 convAttr :: (Exp, [Exp]) -> String
-convAttr ((Str name), xs) = convAttrAux name xs
+convAttr ((Str name _), xs) = convAttrAux name xs
 convAttr (_, xs) = error "attribute name must be STRING when converting to HTML"
 
 convAttrs :: [(Exp, [Exp])] -> String
@@ -72,12 +72,10 @@ convTag name as (Just cs) =
     ++ "</" ++ name ++ ">"
 
 conv :: Exp -> String
-conv (Var {})                               = error "unevaluated variable encountered in MML.HTML"
-conv (Call {})                              = error "unevaluated macro call encountered in MML.HTML"
-conv t@(Tag (Str name) as children)
+conv t@(Tag (Str name _) as children _)
                         | isValidName name  = convTag name (M.toList as) children
                         | otherwise         = error $ "bad tag name: " ++ name
-conv t@(Tag _ _ _)                          =
+conv t@(Tag _ _ _ _)                        =
         error "tag name must be STRING when converting to HTML"
-conv (Str s) = escape s
+conv (Str s _) = escape s
 

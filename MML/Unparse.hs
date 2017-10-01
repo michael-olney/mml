@@ -17,21 +17,12 @@ unparse xs = fullRender LeftMode 1 1 aux2 "" (unparseExps xs)
         aux2 (PP.Str s) x = s ++ x
 
 unparseExp :: Exp -> PP.Doc
-unparseExp (Var xs) =
-    text "<$"
-    <> unparseStr xs
-    <> text ">"
-unparseExp (Str xs) = unparseStr xs
-unparseExp (Tag name attrs children) =
+unparseExp (Str xs _) = unparseStr xs
+unparseExp (Tag name attrs children _) =
     text "<"
     <> unparseExp name
     <> unparseAttrs attrs
     <> unparseChildren children
-    <> text ">"
-unparseExp (Call _ name children) =
-    text "<%"
-    <> unparseExp name
-    <> unparseChildren (Just children)
     <> text ">"
 
 unparsePseudoExp :: Either PseudoExp Exp -> PP.Doc
@@ -48,9 +39,9 @@ unparseExps = (foldr (<>) empty)
         groupFun x y                    = isStr x == isStr y
         separate xs     | isStrList xs  = intersperse (Left StrSep) xs
                         | otherwise     = xs
-        isStrList ((Right (Str _)):_)   = True
+        isStrList ((Right (Str _ _)):_) = True
         isStrList (_:_)                 = False
-        isStr (Right (Str _))           = True
+        isStr (Right (Str _ _))         = True
         isStr _                         = False
 
 unparseChildren :: Maybe [Exp] -> PP.Doc
