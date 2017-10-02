@@ -50,14 +50,13 @@ convAttrAux name [Str val _] = name ++ "=\"" ++ (escape val) ++ "\""
 convAttrAux name [] = error "attribute values must not be empty"
 convAttrAux name xs@(_:_) = error ("attribute values must resolve to single value: " ++ (show xs))
 
-convAttr :: (Exp, [Exp]) -> String
-convAttr ((Str name _), xs) = convAttrAux name xs
-convAttr (_, xs) = error "attribute name must be STRING when converting to HTML"
+convAttr :: (String, [Exp]) -> String
+convAttr (name, xs) = convAttrAux name xs
 
-convAttrs :: [(Exp, [Exp])] -> String
+convAttrs :: [(String, [Exp])] -> String
 convAttrs = (intercalate " ") . (map convAttr)
 
-convTag :: String -> [(Exp, [Exp])] -> Maybe [Exp] -> String
+convTag :: String -> [(String, [Exp])] -> Maybe [Exp] -> String
 convTag name [] Nothing = 
     "<" ++ name ++ "/>"
 convTag name as Nothing = 
@@ -72,10 +71,8 @@ convTag name as (Just cs) =
     ++ "</" ++ name ++ ">"
 
 conv :: Exp -> String
-conv t@(Tag (Str name _) as children _)
+conv t@(Tag name as children _)
                         | isValidName name  = convTag name (M.toList as) children
                         | otherwise         = error $ "bad tag name: " ++ name
-conv t@(Tag _ _ _ _)                        =
-        error "tag name must be STRING when converting to HTML"
 conv (Str s _) = escape s
 

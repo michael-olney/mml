@@ -9,20 +9,18 @@ import qualified Data.Map as M
 import Data.Data
 import Data.Generics.Aliases
 import Data.Generics.Schemes
-import Data.Generics.Twins
 
 import Test.HUnit
 import System.Exit
 
-import Debug.Trace
-
-mkStr str = Str str emptyTBR
-mkTag name attrs children = Tag name attrs children emptyTBR
+mkStr str = Str str dummySM
+mkTag (Str name _) attrs children = Tag name attrs children dummySM
+mkAttrs = M.fromList . (map (\(Str k _, v) -> (k, v)))
 
 relaxedEq :: (Eq a, Data a) => a -> a -> Bool
 relaxedEq x y = (norm x) == (norm y)
     where
-        norm x = everywhere (mkT $ \_ -> emptyTBR) x
+        norm x = everywhere (mkT $ \_ -> dummySM) x
 
 assertEqualRelaxed pref exp got = do
     let msg = pref ++ "Expected:\n" ++ (show exp)
@@ -60,7 +58,12 @@ roundTripTestFun e = TestCase (do
                 let msg = "round trip failed. expected:\n"
                         ++ (show e) ++ "\ngot:\n" ++ (show e2)
                 assertEqualRelaxed "round trip failed: " e e2
-            _            -> assertBool ("roundtrip rejection: " ++ txt) False
+            (Left err)   -> (assertBool
+                                ("roundtrip rejection ("
+                                ++ err
+                                ++ "): " ++ txt)
+                                False
+                                )
             )
         )
 
@@ -68,25 +71,25 @@ roundTripTest e = roundTripTestFun e
 
 basic0 = parseEqTest "{a}" ([mkTag (mkStr "a") (M.empty) Nothing])
 basic1 = parseEqTest "{a{x:y}}" ([
-    mkTag (mkStr "a") (M.fromList [(mkStr "x", [mkStr "y"])]) Nothing])
+    mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"])]) Nothing])
 basic2 = parseEqTest "{a{x:y}{p:q}}" ([
-    mkTag (mkStr "a") (M.fromList [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) Nothing])
+    mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) Nothing])
 basic3 = parseEqTest "{a{x:y}{p:q}:}" ([
-    mkTag (mkStr "a") (M.fromList [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) (Just [])])
+    mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) (Just [])])
 basic4 = parseEqTest "{a{x:y}{p:q}:a}" ([
-    mkTag (mkStr "a") (M.fromList [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) (Just [
+    mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) (Just [
         mkStr "a"
     ])])
 basic5 = parseEqTest "{a{x:y}{p:q}:a{b}}" ([
-    mkTag (mkStr "a") (M.fromList [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) (Just [
+    mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) (Just [
         mkStr "a", mkTag (mkStr "b") (M.empty) Nothing
     ])])
 basic6 = parseEqTest "{a{x:y}{p:q}:a{b}c}" ([
-    mkTag (mkStr "a") (M.fromList [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) (Just [
+    mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) (Just [
         mkStr "a", mkTag (mkStr "b") M.empty Nothing, mkStr "c"
     ])])
 basic7 = parseEqTest "{(--a{--b):\\}}{\\ :\\}}:a\\{b\\}c}" ([
-    mkTag (mkStr "(--a") (M.fromList [(mkStr "--b)", [mkStr "}"]), (mkStr " ", [mkStr "}"])]) (Just [
+    mkTag (mkStr "(--a") (mkAttrs [(mkStr "--b)", [mkStr "}"]), (mkStr " ", [mkStr "}"])]) (Just [
         mkStr "a{b}c"
     ])])
 basic11 = parseEqTest "1. This is a  test" [mkStr "1. This is a test"]
@@ -122,11 +125,11 @@ roundtrip2 = roundTripTest [mkTag (mkStr "a") M.empty (Just [mkStr "b", mkStr "c
 roundtrip3 = roundTripTest [mkTag (mkStr "a") M.empty (Just [mkStr "b", mkTag (mkStr "c") M.empty Nothing, mkStr "d"])]
 roundtrip4 = roundTripTest [mkTag (mkStr "a") M.empty (Just [mkStr "b ", mkTag (mkStr "c") M.empty Nothing, mkStr " d "])]
 roundtrip5 = roundTripTest [
-        mkTag (mkStr "a") (M.fromList [(mkStr "x", [mkStr "y"])])
+        mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"])])
         (Just [mkStr "b ", mkTag (mkStr "c") M.empty Nothing, mkStr " d "])
     ]
 roundtrip6 = roundTripTest [
-        mkTag (mkStr " a\\") (M.fromList [(mkStr "}", [mkStr " {\\ "])])
+        mkTag (mkStr " a\\") (mkAttrs [(mkStr "}", [mkStr " {\\ "])])
         (Just [mkStr "b ", mkTag (mkStr "\\c ") M.empty Nothing, mkStr " d "])
     ]
 roundtrip8 = roundTripTest [mkStr " "]

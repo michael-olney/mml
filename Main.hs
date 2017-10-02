@@ -8,6 +8,7 @@ import MML.Format
 import MML.Format.JSON
 import MML.Format.HTML
 import MML.Format.MML
+import MML.Format.MMLPure
 import MML.Format (Format)
 
 import System.IO
@@ -70,7 +71,8 @@ optParser =
 
 convsIn :: M.Map Format (String -> BS.ByteString -> IO (Either String Doc))
 convsIn = M.fromList [
-    (MML, fromMML)
+    (MML, fromMML),
+    (MMLPure, fromMMLPure)
     ]
 
 convsOut :: M.Map Format (Doc -> IO (Either String BS.ByteString))

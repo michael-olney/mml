@@ -3,19 +3,34 @@
 module MML.Types where
 
 import qualified Data.Map as M
-import Data.Map (Map)
 import Data.Data (Data)
 
 type Doc = [Exp]
 
-data SourceLoc = SourceLoc String Int Int
+data SourceLoc = SourceLoc {
+        slPath :: String,
+        slLineIndex :: Int,
+        slColIndex :: Int
+    }
+    deriving (Show, Eq, Ord, Data)
+
+data SourceMap =
+    SMTag {
+        smTagName :: SourceLoc,
+        smTagAttrs :: SourceLoc,
+        smTagChildren :: SourceLoc
+    }
+    | SMStr {
+        smStrLoc :: SourceLoc
+    }
     deriving (Show, Eq, Ord, Data)
     
-emptyTBR = SourceLoc "" 0 0
+dummySL = SourceLoc "" 0 0
+dummySM = SMStr { smStrLoc = dummySL }
 
 data Exp =
-    Tag Exp (Map Exp [Exp]) (Maybe [Exp]) SourceLoc
-    | Str String SourceLoc
+    Tag String (M.Map String [Exp]) (Maybe [Exp]) SourceMap
+    | Str String SourceMap
     deriving (Show, Eq, Ord, Data)
 
 isStr :: Exp -> Bool

@@ -19,7 +19,8 @@ executable          mml
                     process-extras >= 0.7, aeson >= 1.2,
                     unordered-containers >= 0.2, text >= 1.2, vector >= 0.11,
                     optparse-applicative >= 0.14,
-                    scientific >= 0.3
+                    scientific >= 0.3,
+                    syb >= 0.6
   default-language: Haskell2010
 
 Test-Suite          test-mml
@@ -42,7 +43,8 @@ library
                     parsec >= 3.1, extra >= 1.5, strict >= 0.3, filepath >= 1.4,
                     process-extras >= 0.7, aeson >= 1.2,
                     unordered-containers >= 0.2, text >= 1.2, vector >= 0.11,
-                    scientific >= 0.3
+                    scientific >= 0.3,
+                    syb >= 0.6
   exposed-modules:  MML, MML.Types,
                     MML.Parse, MML.Unparse,
                     MML.Format.HTML, MML.Format.JSON, MML.Format.MML

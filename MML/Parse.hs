@@ -19,8 +19,8 @@ import qualified Data.Map as M
 
 type Parser a = Parsec [TokenPos] () a
 
-traceback :: Parser SourceLoc
-traceback = do
+sourceLoc :: Parser SourceLoc
+sourceLoc = do
     sp <- sourcePos <?> "source position"
     let name = sourceName sp
     let line = sourceLine sp
@@ -67,29 +67,48 @@ exps = many exp
 matchTagBrace (TBrace BTTag BDOpen bv_ )    = True
 matchTagBrace _                             = False
 
-attr :: Parser (Exp, [Exp])
+name :: String -> Parser String
+name nameType = do
+    nameExp <- exp
+    case nameExp of
+        (Str nameStr _) -> return nameStr
+        _               -> fail $ "expected " ++ nameType ++ ", got expression"
+
+attr :: Parser (String, [Exp])
 attr = do
     (TBrace BTTag BDOpen bv) <- token matchTagBrace
-    name <- exp <?> "attribute name"
+    attrName <- name "attribute name"
+
     token (== TSplit) <?> "attribute split"
     val <- exps
     token (== (TBrace BTUnknown BDClose bv))
-    return (name, val)
+    return (attrName, val)
 
 sourcePos :: Parser SourcePos
 sourcePos = liftM statePos getParserState
 
 tag :: Parser Exp
 tag = do
-    tb <- traceback
-
     (TBrace BTTag BDOpen bv) <- token matchTagBrace
-    name <- exp
+
+    nameSL <- sourceLoc
+    tagName <- name "tag name"
+
+    attrsSL <- sourceLoc
     attrs <- many attr >>= return . M.fromList
+
+    childrenSL <- sourceLoc
     exp <- optionMaybe tagExps
+
     token (== (TBrace BTUnknown BDClose bv))
 
-    return (Tag name attrs exp tb)
+    let sm = SMTag {
+                smTagName = nameSL,
+                smTagAttrs = attrsSL,
+                smTagChildren = childrenSL
+            }
+
+    return (Tag tagName attrs exp sm)
 
 tagExps :: Parser [Exp]
 tagExps = do
@@ -120,11 +139,11 @@ strChar =
 str :: Parser Exp
 str =
     do
-        tb <- traceback
+        sl <- sourceLoc
         token (== TEmptyStr)
-        return $ Str "" tb
+        return $ Str "" (SMStr sl)
     <|> do
-        tb <- traceback
+        sl <- sourceLoc
         cs <- many1 strChar
-        return $ Str cs tb
+        return $ Str cs (SMStr sl)
 
