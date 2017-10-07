@@ -72,7 +72,8 @@ optParser =
 convsIn :: M.Map Format (String -> BS.ByteString -> IO (Either String Doc))
 convsIn = M.fromList [
     (MML, fromMML),
-    (MMLPure, fromMMLPure)
+    (MMLPure, fromMMLPure),
+    (JSON, fromJSON)
     ]
 
 convsOut :: M.Map Format (Doc -> IO (Either String BS.ByteString))
