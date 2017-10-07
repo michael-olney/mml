@@ -71,7 +71,7 @@ rawToken = do
     <|> brace ">"   BTUnknown   BDClose BVCharLike
     <|> single "^"  TEmptyStr
     <|> single "~"  TStrSep
-    <|> single ":"  TSplit
+    <|> single "→"  TSplit
     <|> do
         pos <- getPosition
         x <- noneOf (whitespace ++ special)
@@ -155,6 +155,6 @@ eatspaces xs = eatruns runs
 tokens :: Parser [TokenPos]
 tokens = rawTokens >>= return . eatspaces
 
-special = "<>{}:\\~%$^"
+special = "<>{}→\\~%$^"
 whitespace = " \x0d\x0a\t"
 

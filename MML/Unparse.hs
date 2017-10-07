@@ -46,7 +46,7 @@ unparseExps = (foldr (<>) empty)
 
 unparseChildren :: Maybe [Exp] -> PP.Doc
 unparseChildren Nothing     = empty
-unparseChildren (Just xs)   = text ":" <> unparseExps xs
+unparseChildren (Just xs)   = text "→" <> unparseExps xs
 
 unparseAttrs :: Map String [Exp] -> PP.Doc
 unparseAttrs = (foldr (<>) empty) . (map unparseAttr) . M.toList
@@ -55,14 +55,14 @@ unparseAttr :: (String, [Exp]) -> PP.Doc
 unparseAttr (name, es) =
     text "<"
     <> unparseName name
-    <> text ":"
+    <> text "→"
     <> unparseExps es
     <> text ">"
 
 unparseName :: String -> PP.Doc
 unparseName = unparseStr
 
-special = "<>{}:\\~%$^"
+special = "<>{}→\\~%$^"
 whitespace = " \x0d\x0a\t"
 escaped = special ++ whitespace
 

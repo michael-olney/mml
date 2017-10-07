@@ -70,38 +70,38 @@ roundTripTestFun e = TestCase (do
 roundTripTest e = roundTripTestFun e
 
 basic0 = parseEqTest "{a}" ([mkTag (mkStr "a") (M.empty) Nothing])
-basic1 = parseEqTest "{a{x:y}}" ([
+basic1 = parseEqTest "{a{x→y}}" ([
     mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"])]) Nothing])
-basic2 = parseEqTest "{a{x:y}{p:q}}" ([
+basic2 = parseEqTest "{a{x→y}{p→q}}" ([
     mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) Nothing])
-basic3 = parseEqTest "{a{x:y}{p:q}:}" ([
+basic3 = parseEqTest "{a{x→y}{p→q}→}" ([
     mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) (Just [])])
-basic4 = parseEqTest "{a{x:y}{p:q}:a}" ([
+basic4 = parseEqTest "{a{x→y}{p→q}→a}" ([
     mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) (Just [
         mkStr "a"
     ])])
-basic5 = parseEqTest "{a{x:y}{p:q}:a{b}}" ([
+basic5 = parseEqTest "{a{x→y}{p→q}→a{b}}" ([
     mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) (Just [
         mkStr "a", mkTag (mkStr "b") (M.empty) Nothing
     ])])
-basic6 = parseEqTest "{a{x:y}{p:q}:a{b}c}" ([
+basic6 = parseEqTest "{a{x→y}{p→q}→a{b}c}" ([
     mkTag (mkStr "a") (mkAttrs [(mkStr "x", [mkStr "y"]), (mkStr "p", [mkStr "q"])]) (Just [
         mkStr "a", mkTag (mkStr "b") M.empty Nothing, mkStr "c"
     ])])
-basic7 = parseEqTest "{(--a{--b):\\}}{\\ :\\}}:a\\{b\\}c}" ([
+basic7 = parseEqTest "{(--a{--b)→\\}}{\\ →\\}}→a\\{b\\}c}" ([
     mkTag (mkStr "(--a") (mkAttrs [(mkStr "--b)", [mkStr "}"]), (mkStr " ", [mkStr "}"])]) (Just [
         mkStr "a{b}c"
     ])])
 basic11 = parseEqTest "1. This is a  test" [mkStr "1. This is a test"]
-basic12 = parseEqTest "{t:a b}" [mkTag (mkStr "t") M.empty (Just [mkStr "a b"])]
+basic12 = parseEqTest "{t→a b}" [mkTag (mkStr "t") M.empty (Just [mkStr "a b"])]
 
 reject0 = parseRejectTest "{"
 reject1 = parseRejectTest "}"
 reject2 = parseRejectTest ":"
 reject3 = parseRejectTest "{}}"
 reject4 = parseRejectTest "{{{}}"
-reject5 = parseRejectTest "{:}"
-reject6 = parseRejectTest "{a::}"
+reject5 = parseRejectTest "{→}"
+reject6 = parseRejectTest "{a→→}"
 reject7 = parseRejectTest "a\\"
 
 space0 = parseEqTest " a " ([mkStr "a"])
@@ -148,7 +148,7 @@ tokenize5 = tokenizeEqTest " ~ " [
         TStrSep,
         TEOF
         ]
-tokenize6 = tokenizeEqTest " : " [
+tokenize6 = tokenizeEqTest " → " [
         TSplit,
         TEOF
         ]
@@ -198,7 +198,7 @@ tokenize14 = tokenizeEqTest " < \\ \\ > " [
         TBrace BTUnknown BDClose BVCharLike,
         TEOF
         ]
-tokenize17 = tokenizeEqTest "{t:a b}" [
+tokenize17 = tokenizeEqTest "{t→a b}" [
         TBrace BTTag BDOpen BVSpecialLike,
         TChar 't',
         TSplit,
@@ -208,7 +208,7 @@ tokenize17 = tokenizeEqTest "{t:a b}" [
         TBrace BTUnknown BDClose BVSpecialLike,
         TEOF
         ]
-tokenize18 = tokenizeEqTest "{t:a b }" [
+tokenize18 = tokenizeEqTest "{t→a b }" [
         TBrace BTTag BDOpen BVSpecialLike,
         TChar 't',
         TSplit,
@@ -218,7 +218,7 @@ tokenize18 = tokenizeEqTest "{t:a b }" [
         TBrace BTUnknown BDClose BVSpecialLike,
         TEOF
         ]
-tokenize19 = tokenizeEqTest "<t:a b \n >  c" [
+tokenize19 = tokenizeEqTest "<t→a b \n >  c" [
         TBrace BTTag BDOpen BVCharLike,
         TChar 't',
         TSplit,
