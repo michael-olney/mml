@@ -155,6 +155,6 @@ eatspaces xs = eatruns runs
 tokens :: Parser [TokenPos]
 tokens = rawTokens >>= return . eatspaces
 
-special = "<>{}→\\~%$^"
+special = "<>{}→\\~^"
 whitespace = " \x0d\x0a\t"
 

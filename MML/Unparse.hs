@@ -62,7 +62,7 @@ unparseAttr (name, es) =
 unparseName :: String -> PP.Doc
 unparseName = unparseStr
 
-special = "<>{}→\\~%$^"
+special = "<>{}→\\~^"
 whitespace = " \x0d\x0a\t"
 escaped = special ++ whitespace
 
