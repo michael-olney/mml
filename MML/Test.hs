@@ -140,10 +140,28 @@ stringsep0 = parseEqTest " a ~ b " [mkStr "a", mkStr "b"]
 stringsep1 = parseRejectTest " a ~~ b "
 stringsep2 = parseRejectTest "~a"
 
+tokenize1 = tokenizeEqTest "`  {→~^`" [
+        TChar ' ',
+        TChar ' ',
+        TChar '{',
+        TChar '→',
+        TChar '~',
+        TChar '^',
+        TEOF
+        ]
+
 tokenize2 = tokenizeEqTest " ^ " [
         TEmptyStr,
         TEOF
         ]
+
+tokenize3 = tokenizeEqTest "/*` {*/abc" [
+        TChar 'a',
+        TChar 'b',
+        TChar 'c',
+        TEOF
+        ]
+
 tokenize5 = tokenizeEqTest " ~ " [
         TStrSep,
         TEOF
@@ -232,7 +250,9 @@ tokenize19 = tokenizeEqTest "<t→a b \n >  c" [
         ]
 
 tests = TestList [
+    TestLabel "tokenize1" tokenize1,
     TestLabel "tokenize2" tokenize2,
+    TestLabel "tokenize3" tokenize3,
     TestLabel "tokenize5" tokenize5,
     TestLabel "tokenize6" tokenize6,
     TestLabel "tokenize7" tokenize7,

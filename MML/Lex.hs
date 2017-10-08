@@ -87,12 +87,33 @@ rawToken = do
         x <- oneOf whitespace
         return . (, pos) . TSpace . Just $ x)
 
+
+rawTokensAux :: Parser [TokenPos]
+rawTokensAux = do
+    do
+        pos <- getPosition
+        string "/*"
+        manyTill anyChar (string "*/")
+        return []
+    <|> do
+        pos <- getPosition
+        string "`"
+        toks <- many $ do
+            pos <- getPosition
+            tok <- noneOf "`"
+            return (TChar tok, pos)
+        string "`"
+        return toks
+    <|> do
+        tok <- rawToken
+        return [tok]
+
 rawTokens :: Parser [TokenPos]
 rawTokens = do
-    xs <- many rawToken
+    xs <- many rawTokensAux
     pos <- getPosition
     eof
-    return . (++ [(TEOF, pos)]) $ xs
+    return . (++ [(TEOF, pos)]) $ concat xs
 
 isSpace (TSpace _)  = True
 isSpace x           = False
@@ -155,6 +176,6 @@ eatspaces xs = eatruns runs
 tokens :: Parser [TokenPos]
 tokens = rawTokens >>= return . eatspaces
 
-special = "<>{}→\\~^"
+special = "<>{}→\\~^`"
 whitespace = " \x0d\x0a\t"
 
