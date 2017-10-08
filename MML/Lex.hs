@@ -92,7 +92,7 @@ rawTokensAux :: Parser [TokenPos]
 rawTokensAux = do
     do
         pos <- getPosition
-        string "/*"
+        try $ string "/*"
         manyTill anyChar (string "*/")
         return []
     <|> do

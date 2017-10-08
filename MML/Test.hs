@@ -162,6 +162,12 @@ tokenize3 = tokenizeEqTest "/*` {*/abc" [
         TEOF
         ]
 
+tokenize4 = tokenizeEqTest "//" [
+        TChar '/',
+        TChar '/',
+        TEOF
+        ]
+
 tokenize5 = tokenizeEqTest " ~ " [
         TStrSep,
         TEOF
@@ -253,6 +259,7 @@ tests = TestList [
     TestLabel "tokenize1" tokenize1,
     TestLabel "tokenize2" tokenize2,
     TestLabel "tokenize3" tokenize3,
+    TestLabel "tokenize4" tokenize4,
     TestLabel "tokenize5" tokenize5,
     TestLabel "tokenize6" tokenize6,
     TestLabel "tokenize7" tokenize7,
