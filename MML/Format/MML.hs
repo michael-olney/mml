@@ -15,6 +15,7 @@ import Data.Generics.Schemes
 import Data.Generics.Aliases
 
 import Control.Monad.Extra
+import Control.DeepSeq
 
 toMML = error "conversion to MML not yet supported"
 
@@ -44,16 +45,32 @@ tryInclude env path = do
 
     inlineExps mml
 
+tryReadFile :: M.Map String [Exp] -> String -> IO [Exp]
+tryReadFile env path = do
+    ih <- openBinaryFile path ReadMode
+    bs <- BS.hGetContents ih
+
+    let sm = SMStr $ SourceLoc path 0 0
+    let text = toString bs
+
+    deepseq bs (hClose ih)
+
+    return [Str text sm]
+
 inlineExps :: [Exp] -> IO [Exp]
 inlineExps = everywhereM $ mkM inline
     where
         inline :: [Exp] -> IO [Exp]
         inline (Tag "#include" env (Just src) sm:xs) = do
             head <- (tryInclude env $ unwrapStr src) >>= inline
-            tail <- inline xs
-            return $ head ++ tail
+            return $ head ++ xs
         inline (Tag "#include" env Nothing sm:xs) =
             error "missing source path in #include"
+        inline (Tag "#readfile" env (Just path) sm:xs) = do
+            head <- tryReadFile env $ unwrapStr path
+            return $ head ++ xs
+        inline (Tag "#readfile" env Nothing sm:xs) =
+            error "missing file path in #readfile"
         inline x =
             return x
 
