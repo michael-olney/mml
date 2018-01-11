@@ -7,11 +7,8 @@ import Data.List (elem, groupBy, intersperse)
 import qualified Data.Map as M
 import Data.Map (Map)
 
-data PseudoExp = StrSep
-
 unparse :: Doc -> String
---unparse xs = unparseExp (Tag "?mml-version" [] [Str "0"])
-unparse xs = fullRender LeftMode 1 1 aux2 "" (unparseExps xs)
+unparse xs = fullRender LeftMode 1 1 aux2 "" (unparseExps . ExpList $ xs)
     where
         aux2 (PP.Chr c) x = c:x
         aux2 (PP.Str s) x = s ++ x
@@ -25,33 +22,23 @@ unparseExp (Tag name attrs children _) =
     <> unparseChildren children
     <> text ">"
 
-unparsePseudoExp :: Either PseudoExp Exp -> PP.Doc
-unparsePseudoExp (Left StrSep)  = text "~"
-unparsePseudoExp (Right e)      = unparseExp e
-
-unparseExps :: [Exp] -> PP.Doc
+unparseExps :: ExpList -> PP.Doc
 unparseExps = (foldr (<>) empty)
-        . (map unparsePseudoExp)
-        . (concatMap separate)
-        . (groupBy groupFun)
-        . (map Right)
+        . (map unparseExp)
+        . unwrapExpList
     where
         groupFun x y                    = isStr x == isStr y
-        separate xs     | isStrList xs  = intersperse (Left StrSep) xs
-                        | otherwise     = xs
-        isStrList ((Right (Str _ _)):_) = True
-        isStrList (_:_)                 = False
         isStr (Right (Str _ _))         = True
         isStr _                         = False
 
-unparseChildren :: Maybe [Exp] -> PP.Doc
+unparseChildren :: Maybe ExpList -> PP.Doc
 unparseChildren Nothing     = empty
 unparseChildren (Just xs)   = text "→" <> unparseExps xs
 
-unparseAttrs :: Map String [Exp] -> PP.Doc
+unparseAttrs :: Map String ExpList -> PP.Doc
 unparseAttrs = (foldr (<>) empty) . (map unparseAttr) . M.toList
 
-unparseAttr :: (String, [Exp]) -> PP.Doc
+unparseAttr :: (String, ExpList) -> PP.Doc
 unparseAttr (name, es) =
     text "<"
     <> unparseName name

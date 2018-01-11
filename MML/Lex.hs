@@ -3,10 +3,7 @@
 module MML.Lex (
     tokenize,
     TokenPos, Token(..),
-    BraceVariant(..),
     BraceDir(..),
-    BraceType(..),
-    SpaceType(..)
     ) where
 
 import Prelude hiding (exp)
@@ -28,31 +25,32 @@ tokenize name mml = let
             (Right xs)      -> return . Right $ xs
             )
 
-data BraceVariant = BVSpecialLike | BVCharLike
-    deriving (Show, Eq, Ord, Data)
 data BraceDir = BDOpen | BDClose
-    deriving (Show, Eq, Ord, Data)
-data BraceType = BTTag | BTUnknown
-    deriving (Show, Eq, Ord, Data)
-data SpaceType = STBare | STEscaped
     deriving (Show, Eq, Ord, Data)
 
 data Token =
     TChar Char
     | TSpace (Maybe Char)
-    | TBrace BraceType BraceDir BraceVariant
-    | TEmptyStr
-    | TStrSep
+    | TBrace BraceDir
     | TSplit
     | TEOF
     deriving (Show, Eq, Ord, Data)
 
+isChar (TChar _)                    = True
+isChar _                            = False
+
+isBareSpace (TSpace Nothing)        = True
+isBareSpace _                       = False
+
+isCoveredSpace (TSpace (Just _))    = True
+isCoveredSpace _                    = False
+
 type TokenPos = (Token, SourcePos)
 
-brace str bt bd bv = do
+brace str bd = do
     pos <- getPosition
     try $ string str
-    return . (, pos) $ TBrace bt bd bv
+    return . (, pos) $ TBrace bd
 
 single str con = do
     pos <- getPosition
@@ -65,12 +63,8 @@ rawToken = do
         pos <- getPosition
         oneOf whitespace
         return . (, pos) $ TSpace Nothing
-    <|> brace "{"   BTTag       BDOpen  BVSpecialLike
-    <|> brace "}"   BTUnknown   BDClose BVSpecialLike
-    <|> brace "<"   BTTag       BDOpen  BVCharLike
-    <|> brace ">"   BTUnknown   BDClose BVCharLike
-    <|> single "^"  TEmptyStr
-    <|> single "~"  TStrSep
+    <|> brace "{"  BDOpen 
+    <|> brace "}"  BDClose
     <|> single "→"  TSplit
     <|> do
         pos <- getPosition
@@ -88,8 +82,8 @@ rawToken = do
         return . (, pos) . TSpace . Just $ x)
 
 
-rawTokensAux :: Parser [TokenPos]
-rawTokensAux = do
+tokensAux :: Parser [TokenPos]
+tokensAux = do
     do
         pos <- getPosition
         try $ string "/*"
@@ -108,74 +102,13 @@ rawTokensAux = do
         tok <- rawToken
         return [tok]
 
-rawTokens :: Parser [TokenPos]
-rawTokens = do
-    xs <- many rawTokensAux
+tokens :: Parser [TokenPos]
+tokens = do
+    xs <- many tokensAux
     pos <- getPosition
     eof
     return . (++ [(TEOF, pos)]) $ concat xs
 
-isSpace (TSpace _)  = True
-isSpace x           = False
-
-isEscapedSpace (TSpace (Just _))    = True
-isEscapedSpace _                    = False
-
-isChar (TChar {})               = True
-isChar x                        = False
-
-data GroupType a =
-    GTSpace a | GTChar a | GTSpecial a | GTCharLike BraceDir a
-    deriving (Show, Eq)
-
-unwrapGT (GTSpace xs)           = xs
-unwrapGT (GTChar xs)            = xs
-unwrapGT (GTCharLike _ xs)      = xs
-unwrapGT (GTSpecial xs)         = xs
-
-eatspaces :: [TokenPos] -> [TokenPos]
-eatspaces xs = eatruns runs
-    where
-        runs = (map aux) . (groupBy groupFun2) $ xs
-        groupFun2 x y = aux2 x == aux2 y
-        isCharLikeO (TBrace _ BDOpen BVCharLike)    = True
-        isCharLikeO _                               = False
-        isCharLikeC (TBrace _ BDClose BVCharLike)   = True
-        isCharLikeC _                               = False
-        aux x   | isSpace . fst . head $ x      = GTSpace x
-                | isChar . fst . head $ x       = GTChar x
-                | isCharLikeO . fst . head $ x  = (GTCharLike BDOpen) x
-                | isCharLikeC . fst . head $ x  = (GTCharLike BDClose) x
-                | otherwise                     = GTSpecial x
-        aux2 x  | isSpace . fst $ x             = GTSpace ()
-                | isChar . fst $ x              = GTChar ()
-                | isCharLikeO . fst $ x         = GTCharLike BDOpen ()
-                | isCharLikeC . fst $ x         = GTCharLike BDClose ()
-                | otherwise                     = GTSpecial ()
-        eatruns ((GTChar x):(GTSpace s):(GTChar y):xs) =
-            (x ++ (one s)) ++ (eatruns $ (GTChar y):xs)
-        eatruns ((GTCharLike BDClose x):(GTSpace s):(GTChar y):xs) =
-            (x ++ (one s)) ++ (eatruns $ (GTChar y):xs)
-        eatruns ((GTChar x):(GTSpace s):(GTCharLike BDOpen y):xs) =
-            (x ++ (one s)) ++ (eatruns $ (GTCharLike BDOpen y):xs)
-        eatruns ((GTCharLike BDClose x):(GTSpace s):(GTCharLike BDOpen y):xs) =
-            (x ++ (one s)) ++ (eatruns $ (GTChar y):xs)
-        eatruns (x:(GTSpace s):xs) =
-            ((unwrapGT x) ++ (all s)) ++ (eatruns xs)
-        eatruns ((GTSpace s):xs) =
-            (all s) ++ (eatruns xs)
-        eatruns (x:xs) =
-            (concatMap unwrapGT [x]) ++ (eatruns xs)
-        eatruns [] = []
-        all = filter (isEscapedSpace . fst)
-        one [] = []
-        one xs@((_, pos):_) | (length . all $ xs) > 0 = all xs
-                            | otherwise =
-                ((TSpace Nothing, pos):) . (filter (isEscapedSpace . fst)) $ xs
-
-tokens :: Parser [TokenPos]
-tokens = rawTokens >>= return . eatspaces
-
-special = "<>{}→\\~^`"
+special = "{}→\\~^`"
 whitespace = " \x0d\x0a\t"
 

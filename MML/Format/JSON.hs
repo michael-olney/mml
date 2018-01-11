@@ -20,16 +20,16 @@ import qualified Data.List as L
 -- Encoding
 -- --------------------------
 
-expsToAeson :: [Exp] -> [Value]
-expsToAeson = L.map expToAeson
+expsToAeson :: ExpList -> [Value]
+expsToAeson = (L.map expToAeson) . unwrapExpList
 
-attrToAeson :: (String, [Exp]) -> (Txt.Text, Value)
+attrToAeson :: (String, ExpList) -> (Txt.Text, Value)
 attrToAeson (key, exps) = (convKey key, convExps exps)
     where
         convKey = Txt.pack
         convExps = Aeson.Array . Vec.fromList . expsToAeson
 
-attrsToAeson :: M.Map String [Exp] -> Value
+attrsToAeson :: M.Map String ExpList -> Value
 attrsToAeson = Aeson.Object . H.fromList . (L.map attrToAeson) . M.toList
 
 childrenToAeson Nothing = Aeson.Null
@@ -78,7 +78,7 @@ expToAeson (Str val sm) =
     ]
 
 toJSON :: Doc -> IO (Either String BS.ByteString)
-toJSON = return . Right . encode . expsToAeson
+toJSON = return . Right . encode . expsToAeson . ExpList
 
 -- --------------------------
 -- Decoding
@@ -112,11 +112,11 @@ exAttr (pkey, pval) = do
     val <- expsFromJSON pval
     Right (Txt.unpack pkey, val)
 
-exAttrs :: Aeson.Value -> Either String (M.Map String [Exp])
+exAttrs :: Aeson.Value -> Either String (M.Map String ExpList)
 exAttrs (Aeson.Object attrMap) =
     do
         attrList <- mapM exAttr $ H.toList attrMap
-        return . M.fromList $ attrList
+        return . (M.map ExpList) . M.fromList $ attrList
 exAttrs _ = Left "expected object"
 
 exChildren :: Aeson.Value -> Either String (Maybe [Exp])
@@ -130,7 +130,7 @@ expFromJSON (Aeson.Object exp@(getStrAttr "type" -> Right "tag")) =
         attrs <- getAttr "attrs" exp >>= exAttrs
         children <- getAttr "children" exp >>= exChildren
         sm  <- getAttr "source_map" exp >>= exSourceMap
-        return $ Tag name attrs children sm
+        return $ Tag name attrs (children >>= Just . ExpList) sm
 expFromJSON (Aeson.Object exp@(getStrAttr "type" -> Right "str")) =
     do
         val <- getStrAttr "value" exp

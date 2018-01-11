@@ -1,4 +1,7 @@
-{-# LANGUAGE FlexibleContexts, TupleSections #-}
+{-#
+LANGUAGE FlexibleContexts, TupleSections, ScopedTypeVariables,
+ViewPatterns
+#-}
 
 module MML.Parse (parse) where
 
@@ -14,10 +17,16 @@ import Text.ParserCombinators.Parsec.Prim hiding (parse, token, tokens, Parser)
 
 import Control.Monad
 
+import Data.Generics
+
 import Data.List
 import qualified Data.Map as M
 
 type Parser a = Parsec [TokenPos] () a
+
+type TokenExp = ExpAux Token
+type TokenAttrMap = AttrMapAux Token
+type TokenExpList = ExpListAux Token
 
 sourceLoc :: Parser SourceLoc
 sourceLoc = do
@@ -26,6 +35,45 @@ sourceLoc = do
     let line = sourceLine sp
     let col = sourceColumn sp
     return $ (SourceLoc name line col)
+
+elimEmptyStrs :: [TokenExp] -> [TokenExp]
+elimEmptyStrs = everywhere $ mkT (ExpList . elimFlat . unwrapExpList)
+    where
+    elimFlat = filter (not . isEmptyStr)
+    isEmptyStr (Str (filter (not . isBareSpace) -> []) _)   = True
+    isEmptyStr _                                            = False
+
+reduceSpaces :: [TokenExp] -> [TokenExp]
+reduceSpaces = everywhere $ mkT red
+    where
+        red (sp@(TSpace Nothing):(TSpace Nothing):es)   = sp:es
+        red e                                           = e
+
+elimSpaces :: [TokenExp] -> [TokenExp]
+elimSpaces = everywhere $ mkT elimSpacesFlat
+
+elimSpacesFlat :: TokenExpList -> TokenExpList
+elimSpacesFlat = ExpList . elim . unwrapExpList
+    where
+        elim []                     = []
+        elim e@(head -> Str ts sm)  = [Str (elimLeft ts) sm] ++ (tail e)
+        elim e@(last -> Str ts sm)  = (init e) ++ [Str (elimRight ts) sm]
+        elim e                      = e
+        elimLeft                    = dropWhile isBareSpace
+        elimRight                   = dropWhileEnd isBareSpace
+
+tokToChar :: Token -> Char
+tokToChar (TChar c)          = c
+tokToChar (TSpace Nothing)   = ' '
+tokToChar (TBrace BDOpen)    = '{'
+tokToChar (TBrace BDClose)   = '}'
+tokToChar TSplit             = '→'
+
+convertTokens :: TokenExp -> Exp
+convertTokens = fmap tokToChar
+
+postproc :: [TokenExp] -> [Exp]
+postproc = (map convertTokens) . elimEmptyStrs . elimSpaces . reduceSpaces
 
 parse :: String -> String -> IO (Either String Doc)
 parse name mml = do
@@ -36,7 +84,7 @@ parse name mml = do
                 let r = P.parse doc name toks
                 (case r of
                         (Left err)  -> return . Left . show $ err
-                        (Right x)   -> return . Right $ x
+                        (Right x)   -> return . Right . postproc $ x
                         )
             )
 
@@ -47,60 +95,55 @@ token p = tokenPrim show nextPos testToken
         nextPos pos _ []            = pos
         testToken (x, pos)          = if p x then Just x else Nothing
 
-doc :: Parser Doc
+doc :: Parser [TokenExp]
 doc = do
-    cs <- exps
+    cs <- many exp
     token (== TEOF)
     return cs
 
-exp :: Parser Exp
-exp =
-    do
-        r <- str
-        optional $ token (== TStrSep)
-        return r
-    <|> tag
-
-exps :: Parser [Exp]
-exps = many exp
-
-matchTagBrace (TBrace BTTag BDOpen bv_ )    = True
-matchTagBrace _                             = False
+exp :: Parser TokenExp
+exp = str <|> tag
 
 name :: String -> Parser String
-name nameType = do
-    nameExp <- exp
-    case nameExp of
-        (Str nameStr _) -> return nameStr
-        _               -> fail $ "expected " ++ nameType ++ ", got expression"
+name nameType = (many (token isChar) <?> nameType) >>= return . map tokToChar
 
-attr :: Parser (String, [Exp])
+bareSpaces :: Parser [Token]
+bareSpaces = many $ token isBareSpace
+
+attr :: Parser (String, [TokenExp])
 attr = do
-    (TBrace BTTag BDOpen bv) <- token matchTagBrace
+    token (== TBrace BDOpen)
+    bareSpaces
+
     attrName <- name "attribute name"
+    bareSpaces
 
     token (== TSplit) <?> "attribute split"
-    val <- exps
-    token (== (TBrace BTUnknown BDClose bv))
+    val <- many exp
+    token (== TBrace BDClose)
+    bareSpaces
     return (attrName, val)
 
 sourcePos :: Parser SourcePos
 sourcePos = liftM statePos getParserState
 
-tag :: Parser Exp
+tag :: Parser TokenExp
 tag = do
-    (TBrace BTTag BDOpen bv) <- token matchTagBrace
+    token (== TBrace BDOpen)
+    bareSpaces
 
     nameSL <- sourceLoc
     tagName <- name "tag name"
+    bareSpaces
 
     attrsSL <- sourceLoc
-    attrs <- many attr >>= return . M.fromList
+    attrs <- many attr >>= return . (M.map ExpList) . M.fromList
+    bareSpaces
 
     childrenSL <- sourceLoc
     exp <- optionMaybe tagExps
 
-    token (== (TBrace BTUnknown BDClose bv))
+    token (== TBrace BDClose)
 
     let sm = SMTag {
                 smTagName = nameSL,
@@ -108,42 +151,28 @@ tag = do
                 smTagChildren = childrenSL
             }
 
-    return (Tag tagName attrs exp sm)
+    return $ Tag tagName attrs (exp >>= (Just . ExpList)) sm
 
-tagExps :: Parser [Exp]
-tagExps = do
-    token (== TSplit)
-    exps
+tagExps :: Parser [TokenExp]
+tagExps = token (== TSplit) >> many exp
 
-matchBrace (TChar _)    = True
-matchBrace _            = False
-
-matchBareSpace (TSpace Nothing) = True
-matchBareSpace _                = False
-
-matchEscapedSpace (TSpace (Just _)) = True
-matchEscapedSpace _                 = False
-
-strChar :: Parser Char
+strChar :: Parser Token
 strChar =
-    do
-        (TChar x) <- token matchBrace
-        return x
-    <|> do
-        (TSpace Nothing) <- token matchBareSpace
-        return ' '
-    <|> do
-        (TSpace (Just x)) <- token matchEscapedSpace
-        return x
+    token isChar
+    <|> token isBareSpace
+    <|> token isCoveredSpace
 
-str :: Parser Exp
-str =
-    do
-        sl <- sourceLoc
-        token (== TEmptyStr)
-        return $ Str "" (SMStr sl)
-    <|> do
-        sl <- sourceLoc
-        cs <- many1 strChar
-        return $ Str cs (SMStr sl)
+str :: Parser TokenExp
+str = do
+    sl <- sourceLoc
+    cs <- many1 strChar
+    return $ Str cs (SMStr sl)
 
+isChar (TChar _)                    = True
+isChar _                            = False
+
+isBareSpace (TSpace Nothing)        = True
+isBareSpace _                       = False
+
+isCoveredSpace (TSpace (Just _))    = True
+isCoveredSpace _                    = False

@@ -39,14 +39,14 @@ tryInclude env path = do
     mmlp <- Pure.fromMMLPure path bs
     let mml = case mmlp of
                 Left err    -> error err
-                Right mml   -> subst env mml
+                Right mml   -> subst env $ mml
 
     hClose ih
 
     inlineExps mml
 
-tryReadFile :: M.Map String [Exp] -> String -> IO [Exp]
-tryReadFile env path = do
+tryReadFile :: String -> IO [Exp]
+tryReadFile path = do
     ih <- openBinaryFile path ReadMode
     bs <- BS.hGetContents ih
 
@@ -62,12 +62,13 @@ inlineExps = everywhereM $ mkM inline
     where
         inline :: [Exp] -> IO [Exp]
         inline (Tag "#include" env (Just src) sm:xs) = do
-            head <- (tryInclude env $ unwrapStr src) >>= inline
+            let uenv = M.map unwrapExpList env
+            head <- (tryInclude uenv $ unwrapStr . unwrapExpList $ src) >>= inline
             return $ head ++ xs
         inline (Tag "#include" env Nothing sm:xs) =
             error "missing source path in #include"
-        inline (Tag "#readfile" env (Just path) sm:xs) = do
-            head <- tryReadFile env $ unwrapStr path
+        inline (Tag "#readfile" env (Just (ExpList path)) sm:xs) = do
+            head <- tryReadFile $ unwrapStr path
             return $ head ++ xs
         inline (Tag "#readfile" env Nothing sm:xs) =
             error "missing file path in #readfile"
@@ -80,6 +81,6 @@ fromMML infile bs = do
     case mmlp of
         Left err    -> return . Left $ err
         Right mmlp  -> do
-            mml <- inlineExps mmlp
+            mml <- inlineExps $ mmlp
             return . Right $ mml
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, DeriveFunctor #-}
 
 module MML.Types where
 
@@ -24,25 +24,28 @@ data SourceMap =
         smStrLoc :: SourceLoc
     }
     deriving (Show, Eq, Ord, Data)
-    
+
 dummySL = SourceLoc "" 0 0
 dummySM = SMStr { smStrLoc = dummySL }
 
-data Exp =
-    Tag String (M.Map String [Exp]) (Maybe [Exp]) SourceMap
-    | Str String SourceMap
-    deriving (Show, Eq, Ord, Data)
+data ExpAux a =
+    Tag String (AttrMapAux a) (Maybe (ExpListAux a)) SourceMap
+    | Str [a] SourceMap
+    deriving (Show, Eq, Ord, Data, Functor)
 
-isStr :: Exp -> Bool
-isStr (Str _ _) = True
-isStr _         = False
+data ExpListAux a = ExpList [ExpAux a]
+    deriving (Show, Eq, Ord, Data, Functor)
 
-unwrap1Str :: Exp -> String
-unwrap1Str (Str x _) = x
-unwrap1Str _ = error "tried to unwrap non-str"
+type AttrMapAux a = M.Map String (ExpListAux a)
+
+type Exp = ExpAux Char
+type AttrMap = AttrMapAux Char
+type ExpList = ExpListAux Char
+
+unwrapExpList (ExpList xs) = xs
 
 unwrapStr :: [Exp] -> String
 unwrapStr [Str x _] = x
 unwrapStr (x:xs) = error "tried to unwrap non-singular str"
-unwrapStr _ = error "tried to unwrap non-str"
+unwrapStr [] = error "tried to unwrap [] as str"
 

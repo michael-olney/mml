@@ -12,7 +12,7 @@ footer = ""
 
 toHTML :: Doc -> IO (Either String BS.ByteString)
 toHTML doc = do
-    let str = header ++ (convExps doc) ++ footer
+    let str = header ++ (convExps . ExpList $ doc) ++ footer
     return . Right . UTF8.fromString $ str
 
 fromHTML :: String -> Doc
@@ -41,31 +41,34 @@ isValidName (c:cs) = (start c) && (aux cs)
         val c = ((start c) || (isNumber c) || (c == '-')
             || (c == '.'))
 
-convExps :: [Exp] -> String
-convExps = foldl (\s c -> s ++ (conv c)) ""
+convExps :: ExpList -> String
+convExps = (foldl (\s c -> s ++ (conv c)) "") . unwrapExpList
 
 -- TODO escape names..
-convAttrAux :: String -> [Exp] -> String
-convAttrAux name [Str val _] = name ++ "=\"" ++ (escape val) ++ "\""
-convAttrAux name [] = error "attribute values must not be empty"
-convAttrAux name xs@(_:_) = error ("attribute values must resolve to single value: " ++ (show xs))
+convAttrAux :: String -> ExpList -> String
+convAttrAux name (ExpList [Str val _]) =
+    name ++ "=\"" ++ (escape val) ++ "\""
+convAttrAux name (ExpList []) =
+    error "attribute values must not be empty"
+convAttrAux name (ExpList xs@(_:_)) =
+    error ("attribute values must resolve to single value: " ++ (show xs))
 
-convAttr :: (String, [Exp]) -> String
+convAttr :: (String, ExpList) -> String
 convAttr (name, xs) = convAttrAux name xs
 
-convAttrs :: [(String, [Exp])] -> String
+convAttrs :: [(String, ExpList)] -> String
 convAttrs = (intercalate " ") . (map convAttr)
 
-convTag :: String -> [(String, [Exp])] -> Maybe [Exp] -> String
-convTag name [] Nothing = 
+convTag :: String -> [(String, ExpList)] -> Maybe ExpList -> String
+convTag name [] Nothing =
     "<" ++ name ++ "/>"
-convTag name as Nothing = 
+convTag name as Nothing =
     "<" ++ name ++ " " ++ (convAttrs as) ++ "/>"
-convTag name [] (Just cs) = 
+convTag name [] (Just cs) =
     "<" ++ name ++ ">"
     ++ (convExps cs)
     ++ "</" ++ name ++ ">"
-convTag name as (Just cs) = 
+convTag name as (Just cs) =
     "<" ++ name ++ " " ++ (convAttrs as) ++ ">"
     ++ (convExps cs)
     ++ "</" ++ name ++ ">"
