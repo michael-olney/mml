@@ -16,6 +16,8 @@ import qualified Text.ParserCombinators.Parsec as P
 import Text.ParserCombinators.Parsec.Prim hiding (parse, token, tokens, Parser)
 
 import Control.Monad
+import Control.Monad.Trans.Either
+import Control.Monad.Trans.Class
 
 import Data.Generics
 
@@ -76,17 +78,13 @@ postproc :: [TokenExp] -> [Exp]
 postproc = (map convertTokens) . elimEmptyStrs . elimSpaces . reduceSpaces
 
 parse :: String -> String -> IO (Either String Doc)
-parse name mml = do
-    toksr <- tokenize name mml
-    (case toksr of
-            (Left x)        -> return . Left $ x
-            (Right toks)    -> do
-                let r = P.parse doc name toks
-                (case r of
-                        (Left err)  -> return . Left . show $ err
-                        (Right x)   -> return . Right . postproc $ x
-                        )
-            )
+parse name mml = runEitherT $ do
+    toks <- EitherT $ tokenize name mml
+    exps <- ppError $ P.parse doc name toks
+    return . postproc $ exps
+    where
+        ppError (Left err)  = left . show $ err
+        ppError (Right res) = right res
 
 token :: (Token -> Bool) -> Parser Token
 token p = tokenPrim show nextPos testToken
