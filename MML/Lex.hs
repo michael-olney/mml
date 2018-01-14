@@ -109,6 +109,6 @@ tokens = do
     eof
     return . (++ [(TEOF, pos)]) $ concat xs
 
-special = "{}→\\~^`"
+special = "{}→\\`"
 whitespace = " \x0d\x0a\t"
 
