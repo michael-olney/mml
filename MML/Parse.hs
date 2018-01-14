@@ -1,6 +1,6 @@
 {-#
-LANGUAGE FlexibleContexts, TupleSections, ScopedTypeVariables,
-ViewPatterns
+LANGUAGE    FlexibleContexts, TupleSections, ScopedTypeVariables,
+            ViewPatterns
 #-}
 
 module MML.Parse (parse, isEmptyIntermItem, elimMiddle, elimSides) where
@@ -26,10 +26,6 @@ import Data.Generics
 
 type Parser a = Parsec [TokenPos] () a
 
-type TokenExp = ExpAux Token
-type TokenAttrMap = AttrMapAux Token
-type TokenExpList = ExpListAux Token
-
 sourceLoc :: Parser SourceLoc
 sourceLoc = do
     sp <- sourcePos <?> "source position"
@@ -37,6 +33,12 @@ sourceLoc = do
     let line = sourceLine sp
     let col = sourceColumn sp
     return $ (SourceLoc name line col)
+
+----------------------------
+--- Whitespace Reduction ---
+----------------------------
+
+-- Intermediate form used for whitespace reduction.
 
 type ElimIntermItem = Either (Token, SourceMap) TokenExp
 type ElimInterm = [ElimIntermItem]
@@ -72,6 +74,8 @@ fromElimInterm interm@((isRight -> True):_) =
     [unwrap $ head interm] ++ (fromElimInterm $ tail interm)
         where unwrap (Right x) = x
 
+-- Whitespace reduction
+
 elimSpaces :: [TokenExp] -> [TokenExp]
 elimSpaces = unwrapExpList . (everywhere $ mkT elimSpacesFlat) . ExpList
 
@@ -105,27 +109,16 @@ elimSides = elimLeft . elimRight
 isBareSpaceInterm (Left (x, _)) = isBareSpace x
 isBareSpaceInterm _             = False
 
-tokToChar :: Token -> Char
-tokToChar (TChar c)          = c
-tokToChar (TSpace Nothing)   = ' '
-tokToChar (TBrace BDOpen)    = '{'
-tokToChar (TBrace BDClose)   = '}'
-tokToChar TSplit             = '→'
+-------------------------------
+--- Main Parser Definitions ---
+-------------------------------
 
-convertTokens :: TokenExp -> Exp
-convertTokens = fmap tokToChar
-
-postproc :: [TokenExp] -> [Exp]
-postproc = (map convertTokens) . elimSpaces
-
-parse :: String -> String -> IO (Either String Doc)
-parse name mml = runEitherT $ do
-    toks <- EitherT $ tokenize name mml
-    exps <- ppError $ P.parse doc name toks
-    return . postproc $ exps
-    where
-        ppError (Left err)  = left . show $ err
-        ppError (Right res) = right res
+-- Top-Level Parser
+doc :: Parser [TokenExp]
+doc = do
+    cs <- many exp
+    token (== TEOF)
+    return cs
 
 token :: (Token -> Bool) -> Parser Token
 token p = tokenPrim show nextPos testToken
@@ -133,12 +126,6 @@ token p = tokenPrim show nextPos testToken
         nextPos _ _ ((_, pos):_)    = pos
         nextPos pos _ []            = pos
         testToken (x, pos)          = if p x then Just x else Nothing
-
-doc :: Parser [TokenExp]
-doc = do
-    cs <- many exp
-    token (== TEOF)
-    return cs
 
 exp :: Parser TokenExp
 exp = str <|> tag
@@ -215,3 +202,36 @@ isBareSpace _                       = False
 
 isCoveredSpace (TSpace (Just _))    = True
 isCoveredSpace _                    = False
+
+-----------------------------------------
+--- Parser Runner and Post-Processing ---
+-----------------------------------------
+
+-- Whitespace handling requires tokens in order to distinguish
+-- between escaped and bare whitespace.
+
+type TokenExp = ExpAux Token
+type TokenAttrMap = AttrMapAux Token
+type TokenExpList = ExpListAux Token
+
+tokToChar :: Token -> Char
+tokToChar (TChar c)          = c
+tokToChar (TSpace Nothing)   = ' '
+tokToChar (TBrace BDOpen)    = '{'
+tokToChar (TBrace BDClose)   = '}'
+tokToChar TSplit             = '→'
+
+convertTokens :: TokenExp -> Exp
+convertTokens = fmap tokToChar
+
+postproc :: [TokenExp] -> [Exp]
+postproc = (map convertTokens) . elimSpaces
+
+parse :: String -> String -> IO (Either String Doc)
+parse name mml = runEitherT $ do
+    toks <- EitherT $ tokenize name mml
+    exps <- ppError $ P.parse doc name toks
+    return . postproc $ exps
+    where
+        ppError (Left err)  = left . show $ err
+        ppError (Right res) = right res
