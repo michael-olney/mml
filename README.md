@@ -6,11 +6,11 @@ concise syntax for writing markup. The primary use-case is
 generating HTML documents.  The following table shows the relation
 between the syntax of MML and HTML:
 
-| HTML                             | MML                |
-| :------------------------------- | :----------------- |
-| &lt;br/&gt;                      | {br}               |
-| &lt;em&gt;&lt;/em&gt;            | {em→}              |
-| &lt;a href=cat&gt;meow&lt;/a&gt; | {a{href→cat}→meow} |
+| HTML                   | MML                  |
+| :--------------------- | :------------------- |
+| `<br/>`                | `{br}`               |
+| `<em></em>`            | `{em→}`              |
+| `<a href=cat>meow</a>` | `{a{href→cat}→meow}` |
 
 Unlike HTML or XML, whitespace reduction within a tag body is part
 of the syntax. In general, whitespace is eliminated completely.
@@ -19,11 +19,11 @@ immediately between two non-whitespace characters that themselves
 occur at or below the level at which the whitespace occurs in the
 document structure. For example:
 
-| Before Reduction                 | After Reduction         |
-| :------------------------------- | :---------------------- |
-| {p→   Hello,   whitespace.   }   | {p→Hello, whitespace.}  |
-| {p→foo    {em→bar} baz}          | {p→foo {em→bar} baz}    |
-| {p→Foo, {br} bar.}               | {p→Foo, {br}bar.}       |
+| Before Reduction                   | After Reduction           |
+| :--------------------------------- | :------------------------ |
+| <code>{p→&nbsp;&nbsp;&nbsp;Hello,&nbsp;&nbsp;&nbsp;whitespace.&nbsp;&nbsp;&nbsp;}</code>   | `{p→Hello, whitespace.}`  |
+| <code>{p→foo&nbsp;&nbsp;&nbsp;&nbsp;{em→bar}&nbsp;baz}</code>          | `{p→foo {em→bar} baz}`    |
+| <code>{p→Foo,&nbsp;{br}&nbsp;bar.}</code>               | `{p→Foo, {br}bar.}`       |
 
 Note the difference between the second and third cases. In the
 second case the whitespace is broken by "bar" within the "em" tag,
