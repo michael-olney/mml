@@ -3,7 +3,7 @@ LANGUAGE FlexibleContexts, TupleSections, ScopedTypeVariables,
 ViewPatterns
 #-}
 
-module MML.Parse (parse) where
+module MML.Parse (parse, isEmptyIntermItem, elimMiddle, elimSides) where
 
 import MML.Types
 import MML.Lex
@@ -19,10 +19,10 @@ import Control.Monad
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.Class
 
-import Data.Generics
-
 import Data.List
+import Data.Either
 import qualified Data.Map as M
+import Data.Generics
 
 type Parser a = Parsec [TokenPos] () a
 
@@ -38,31 +38,72 @@ sourceLoc = do
     let col = sourceColumn sp
     return $ (SourceLoc name line col)
 
-elimEmptyStrs :: [TokenExp] -> [TokenExp]
-elimEmptyStrs = everywhere $ mkT (ExpList . elimFlat . unwrapExpList)
-    where
-    elimFlat = filter (not . isEmptyStr)
-    isEmptyStr (Str (filter (not . isBareSpace) -> []) _)   = True
-    isEmptyStr _                                            = False
+type ElimIntermItem = Either (Token, SourceMap) TokenExp
+type ElimInterm = [ElimIntermItem]
 
-reduceSpaces :: [TokenExp] -> [TokenExp]
-reduceSpaces = everywhere $ mkT red
+isEmptyIntermItem  :: ElimIntermItem -> Bool
+isEmptyIntermItem = (== 0) . (gcount $ mkQ False query) . clearAttrs
     where
-        red (sp@(TSpace Nothing):(TSpace Nothing):es)   = sp:es
-        red e                                           = e
+        query (TChar _)         = True
+        query (TSpace (Just _)) = True
+        query e                 = False
+        clearAttrs :: ElimIntermItem -> ElimIntermItem
+        clearAttrs = everywhere $ mkT clearAttrsT
+        clearAttrsT (m::TokenAttrMap) = M.empty
+
+toElimInterm :: [TokenExp] -> ElimInterm
+toElimInterm = concatMap aux
+    where
+        aux (Str ts sm) = map Left $ zip ts (cycle [sm])
+        aux e           = [Right e]
+
+unwrapL (Left x) = x
+
+fromElimInterm :: ElimInterm -> [TokenExp]
+fromElimInterm [] = []
+fromElimInterm interm@((isLeft -> True):_) =
+    let
+        sm = snd . unwrapL . head $ interm
+        prefix = [Str (map (fst . unwrapL) $ takeWhile isLeft $ interm) sm]
+        suffix = dropWhile isLeft interm
+    in
+        prefix ++ (fromElimInterm suffix)
+fromElimInterm interm@((isRight -> True):_) =
+    [unwrap $ head interm] ++ (fromElimInterm $ tail interm)
+        where unwrap (Right x) = x
 
 elimSpaces :: [TokenExp] -> [TokenExp]
-elimSpaces = everywhere $ mkT elimSpacesFlat
+elimSpaces = unwrapExpList . (everywhere $ mkT elimSpacesFlat) . ExpList
 
 elimSpacesFlat :: TokenExpList -> TokenExpList
-elimSpacesFlat = ExpList . elim . unwrapExpList
+elimSpacesFlat = post . elim . pre
     where
-        elim []                     = []
-        elim e@(head -> Str ts sm)  = [Str (elimLeft ts) sm] ++ (tail e)
-        elim e@(last -> Str ts sm)  = (init e) ++ [Str (elimRight ts) sm]
-        elim e                      = e
-        elimLeft                    = dropWhile isBareSpace
-        elimRight                   = dropWhileEnd isBareSpace
+        pre = toElimInterm . unwrapExpList
+        post = ExpList . fromElimInterm
+        elim = elimSides . elimMiddle
+
+elimMiddle :: ElimInterm -> ElimInterm
+elimMiddle = concatMap elim  . groupBy (\x y -> gpred x == gpred y)
+    where
+        gpred = isEmptyIntermItem
+
+        elim [] = []
+        elim run@((isEmptyIntermItem -> True):_)
+            | spaces /= []  = head spaces : suffix
+            | otherwise     = suffix
+            where
+                spaces = filter isBareSpaceInterm run
+                suffix = filter (not . isBareSpaceInterm) run
+        elim run = run
+
+elimSides :: ElimInterm -> ElimInterm
+elimSides = elimLeft . elimRight
+    where
+        elimLeft = dropWhile isBareSpaceInterm
+        elimRight = reverse . elimLeft . reverse
+
+isBareSpaceInterm (Left (x, _)) = isBareSpace x
+isBareSpaceInterm _             = False
 
 tokToChar :: Token -> Char
 tokToChar (TChar c)          = c
@@ -75,7 +116,7 @@ convertTokens :: TokenExp -> Exp
 convertTokens = fmap tokToChar
 
 postproc :: [TokenExp] -> [Exp]
-postproc = (map convertTokens) . elimEmptyStrs . elimSpaces . reduceSpaces
+postproc = (map convertTokens) . elimSpaces
 
 parse :: String -> String -> IO (Either String Doc)
 parse name mml = runEitherT $ do
