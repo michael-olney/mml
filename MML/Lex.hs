@@ -4,11 +4,12 @@ module MML.Lex (
     tokenize,
     TokenPos, Token(..),
     BraceDir(..),
+    isSpace
     ) where
 
 import Prelude hiding (exp)
 
-import Text.ParserCombinators.Parsec hiding (parse, tokens)
+import Text.ParserCombinators.Parsec hiding (parse, tokens, space)
 import qualified Text.ParserCombinators.Parsec as P
 import Text.ParserCombinators.Parsec.Prim hiding (parse, tokens)
 import Control.Monad
@@ -30,7 +31,7 @@ data BraceDir = BDOpen | BDClose
 
 data Token =
     TChar Char
-    | TSpace (Maybe Char)
+    | TSpace
     | TBrace BraceDir
     | TSplit
     | TEOF
@@ -39,51 +40,48 @@ data Token =
 isChar (TChar _)                    = True
 isChar _                            = False
 
-isBareSpace (TSpace Nothing)        = True
-isBareSpace _                       = False
-
-isCoveredSpace (TSpace (Just _))    = True
-isCoveredSpace _                    = False
+isSpace TSpace  = True
+isSpace _       = False
 
 type TokenPos = (Token, SourcePos)
-
-brace str bd = do
-    pos <- getPosition
-    try $ string str
-    return . (, pos) $ TBrace bd
 
 single str con = do
     pos <- getPosition
     string str
     return . (, pos) $ con
 
-rawToken :: Parser TokenPos
-rawToken = do
-    do
-        pos <- getPosition
-        oneOf whitespace
-        return . (, pos) $ TSpace Nothing
-    <|> brace "{"  BDOpen 
-    <|> brace "}"  BDClose
-    <|> single "→"  TSplit
-    <|> do
-        pos <- getPosition
-        x <- noneOf (whitespace ++ special)
-        return . (, pos) . TChar $ x
-    <|> try (do
-        pos <- getPosition
-        string "\\"
-        x <- noneOf whitespace
-        return . (, pos) . TChar $ x)
-    <|> try (do
-        pos <- getPosition
-        string "\\"
-        x <- oneOf whitespace
-        return . (, pos) . TSpace . Just $ x)
+braces = single "{"  (TBrace BDOpen ) <|> single "}"  (TBrace BDClose)
 
+splits = try (single "->"  TSplit)
 
-tokensAux :: Parser [TokenPos]
-tokensAux = do
+space = do
+    pos <- getPosition
+    oneOf whitespaceChars >> return (TSpace, pos)
+
+slashedChar = do
+    pos <- getPosition
+    string "\\"
+    anyChar >>= return . (, pos) . TChar
+
+bareChar = do
+    pos <- getPosition
+    anyChar >>= return . (, pos) . TChar
+
+nbsp = do
+    pos <- getPosition
+    string "~" >> return (TChar '\x00a0', pos)
+
+basicToken :: Parser TokenPos
+basicToken =
+    braces
+    <|> splits
+    <|> space
+    <|> nbsp
+    <|> slashedChar
+    <|> bareChar
+
+extTokens :: Parser [TokenPos]
+extTokens = do
     do
         pos <- getPosition
         try $ string "/*"
@@ -99,16 +97,15 @@ tokensAux = do
         string "`"
         return toks
     <|> do
-        tok <- rawToken
+        tok <- basicToken
         return [tok]
 
 tokens :: Parser [TokenPos]
 tokens = do
-    xs <- many tokensAux
+    xs <- many extTokens
     pos <- getPosition
     eof
     return . (++ [(TEOF, pos)]) $ concat xs
 
-special = "{}→\\`"
-whitespace = " \x0d\x0a\t"
+whitespaceChars = " \x0d\x0a\t"
 

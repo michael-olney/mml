@@ -1,63 +1,38 @@
-# mml: Minimal Markup Language
+# Mammal
 
-MML is a markup language based partly on Erik Naggum's unreleased
-[Enamel][1] (NML) markup language. The advantages is a simple and
-concise syntax for writing markup. The primary use-case is
-generating HTML documents.  The following table shows the relation
-between the syntax of MML and HTML:
+Mammal (MML) is a markup language intended to provide a simplified
+method for specifying HTML documents. The following table shows the
+relation between the syntax of MML and HTML:
 
-| HTML                   | MML                  |
-| :--------------------- | :------------------- |
-| `<br/>`                | `{br}`               |
-| `<em></em>`            | `{em→}`              |
-| `<a href=cat>meow</a>` | `{a{href→cat}→meow}` |
+| HTML                    | MML                    |
+| :---------------------- | :--------------------- |
+| `<br/>`                 | `{br}`                 |
+| `<em></em>`             | `{em->}`               |
+| `<a href=cat>meow</a>`  | `{a{href->cat}->meow}` |
+| `two&nbsp;&nbsp;spaces` | `two~~spaces`          |
 
 Unlike HTML or XML, whitespace reduction within a tag body is part
-of the syntax. In general, whitespace is eliminated completely.
-The only case where whitespace is preserved is where it occurs
-immediately between two non-whitespace characters that themselves
-occur at or below the level at which the whitespace occurs in the
-document structure. For example:
+of the syntax. The rule is simple: spaces occurring between two
+tags which are not list as [phrasing content][2] in the HTML standard
+is eliminated completely. All other whitespace is reduced to a single
+non-breaking space (U+00A0). Whitespace that is escaped using a
+backslash is not considered whitespace for the purposes
+of whitespace handling. In this approach whitespace being used to
+neatly arrange the source markup is eliminated before the rendering
+stage is reached. Additional non-breaking spaces can be introduced
+using the tilde character ('~').
 
-| Before Reduction                   | After Reduction           |
-| :--------------------------------- | :------------------------ |
-| <code>{p→&nbsp;&nbsp;&nbsp;Hello,&nbsp;&nbsp;&nbsp;whitespace.&nbsp;&nbsp;&nbsp;}</code>   | `{p→Hello, whitespace.}`  |
-| <code>{p→foo&nbsp;&nbsp;&nbsp;&nbsp;{em→bar}&nbsp;baz}</code>          | `{p→foo {em→bar} baz}`    |
-| <code>{p→Foo,&nbsp;{br}&nbsp;bar.}</code>               | `{p→Foo, {br}bar.}`       |
+C-style comments are available (but not C++-style single-line
+comments). Characters are escaped either by preceding them with a
+backslash ('\') or surrounding them with backticks ('\`'). Literal
+characters are passed on as literal to HTML, but no attempt is made
+to prevent the renderer from doing things like collapsing whitespace.
+However, the syntax is designed to deal with these issues at the syntax
+level so that users don't usually have to worry about HTML's whitespace
+rules.
 
-Note the difference between the second and third cases. In the
-second case the whitespace is broken by "bar" within the "em" tag,
-while in the third case the "br" tag contains no text in its body
-and so does not break whitespace.
-
-Single characters can be escaped by prefixing them wiht a backslash
-(\\). Sequences of characters (including backslashes) can be
-escaped by surrounding them with backticks (\`). Escaped whitespace
-is treated as non-whitespace for the purposes of whitespace
-reduction.
-
-## Templating
-
-One MML file can be included in another with substitution using the
-following syntax:
-
-    {#include{substitution1→value1}{substitution2→value2}→filename.mml}
-
-Within "filename.mml" the following syntax can be used to receive the
-values of available substitutions:
-
-    Here is substitution 1: {$substitution1}
-
-Which results in the following MML:
-
-    Here is substitution 1: value1
-
-## Future Directions
-
-A useful future feature would be to implement custom element types.
-This would mostly supplant the templating facility. New element types
-would be defined in terms of others by specifying rewriting rules to
-be applied within the element's document structure.
+Mammal is inspired partly by Erik Naggum's unreleased [Enamel][1]
+(NML) markup language.
 
 [1]: http://www.schnada.de/grapt/eriknaggum-enamel.html
-
+[2]: https://html.spec.whatwg.org/multipage/dom.html#phrasing-content

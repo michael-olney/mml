@@ -11,7 +11,7 @@ import MML.Lex
 import Prelude hiding (exp)
 
 import Text.Parsec (Parsec)
-import Text.ParserCombinators.Parsec hiding (parse, token, tokens, Parser)
+import Text.ParserCombinators.Parsec hiding (parse, token, tokens, Parser, spaces)
 import qualified Text.ParserCombinators.Parsec as P
 import Text.ParserCombinators.Parsec.Prim hiding (parse, token, tokens, Parser)
 
@@ -47,7 +47,6 @@ isEmptyIntermItem  :: ElimIntermItem -> Bool
 isEmptyIntermItem = (== 0) . (gcount $ mkQ False query) . clearAttrs
     where
         query (TChar _)         = True
-        query (TSpace (Just _)) = True
         query e                 = False
         clearAttrs :: ElimIntermItem -> ElimIntermItem
         clearAttrs = everywhere $ mkT clearAttrsT
@@ -96,18 +95,18 @@ elimMiddle = concatMap elim  . groupBy (\x y -> gpred x == gpred y)
             | spaces /= []  = head spaces : suffix
             | otherwise     = suffix
             where
-                spaces = filter isBareSpaceInterm run
-                suffix = filter (not . isBareSpaceInterm) run
+                spaces = filter isSpaceInterm run
+                suffix = filter (not . isSpaceInterm) run
         elim run = run
 
 elimSides :: ElimInterm -> ElimInterm
 elimSides = elimLeft . elimRight
     where
-        elimLeft = dropWhile isBareSpaceInterm
+        elimLeft = dropWhile isSpaceInterm
         elimRight = reverse . elimLeft . reverse
 
-isBareSpaceInterm (Left (x, _)) = isBareSpace x
-isBareSpaceInterm _             = False
+isSpaceInterm (Left (x, _)) = isSpace x
+isSpaceInterm _             = False
 
 -------------------------------
 --- Main Parser Definitions ---
@@ -133,21 +132,21 @@ exp = str <|> tag
 name :: String -> Parser String
 name nameType = (many (token isChar) <?> nameType) >>= return . map tokToChar
 
-bareSpaces :: Parser [Token]
-bareSpaces = many $ token isBareSpace
+spaces :: Parser [Token]
+spaces = many $ token isSpace
 
 attr :: Parser (String, [TokenExp])
 attr = do
     token (== TBrace BDOpen)
-    bareSpaces
+    spaces
 
     attrName <- name "attribute name"
-    bareSpaces
+    spaces
 
     token (== TSplit) <?> "attribute split"
     val <- many exp
     token (== TBrace BDClose)
-    bareSpaces
+    spaces
     return (attrName, val)
 
 sourcePos :: Parser SourcePos
@@ -156,15 +155,15 @@ sourcePos = liftM statePos getParserState
 tag :: Parser TokenExp
 tag = do
     token (== TBrace BDOpen)
-    bareSpaces
+    spaces
 
     nameSL <- sourceLoc
     tagName <- name "tag name"
-    bareSpaces
+    spaces
 
     attrsSL <- sourceLoc
     attrs <- many attr >>= return . (M.map ExpList) . M.fromList
-    bareSpaces
+    spaces
 
     childrenSL <- sourceLoc
     exp <- optionMaybe tagExps
@@ -183,10 +182,7 @@ tagExps :: Parser [TokenExp]
 tagExps = token (== TSplit) >> many exp
 
 strChar :: Parser Token
-strChar =
-    token isChar
-    <|> token isBareSpace
-    <|> token isCoveredSpace
+strChar = token isChar <|> token isSpace
 
 str :: Parser TokenExp
 str = do
@@ -196,12 +192,6 @@ str = do
 
 isChar (TChar _)                    = True
 isChar _                            = False
-
-isBareSpace (TSpace Nothing)        = True
-isBareSpace _                       = False
-
-isCoveredSpace (TSpace (Just _))    = True
-isCoveredSpace _                    = False
 
 -----------------------------------------
 --- Parser Runner and Post-Processing ---
@@ -215,11 +205,11 @@ type TokenAttrMap = AttrMapAux Token
 type TokenExpList = ExpListAux Token
 
 tokToChar :: Token -> Char
-tokToChar (TChar c)          = c
-tokToChar (TSpace Nothing)   = ' '
-tokToChar (TBrace BDOpen)    = '{'
-tokToChar (TBrace BDClose)   = '}'
-tokToChar TSplit             = '→'
+tokToChar (TChar c)         = c
+tokToChar TSpace            = ' '
+tokToChar (TBrace BDOpen)   = '{'
+tokToChar (TBrace BDClose)  = '}'
+tokToChar TSplit            = '→'
 
 convertTokens :: TokenExp -> Exp
 convertTokens = fmap tokToChar

@@ -61,12 +61,10 @@ inlineExps :: [Exp] -> IO [Exp]
 inlineExps = everywhereM $ mkM inline
     where
         inline :: [Exp] -> IO [Exp]
-        inline (Tag "#include" env (Just src) sm:xs) = do
+        inline (Tag ('@':src) env Nothing sm:xs) = do
             let uenv = M.map unwrapExpList env
-            head <- (tryInclude uenv $ unwrapStr . unwrapExpList $ src) >>= inline
+            head <- (tryInclude uenv src) >>= inline
             return $ head ++ xs
-        inline (Tag "#include" env Nothing sm:xs) =
-            error "missing source path in #include"
         inline (Tag "#readfile" env (Just (ExpList path)) sm:xs) = do
             head <- tryReadFile $ unwrapStr path
             return $ head ++ xs

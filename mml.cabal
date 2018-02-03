@@ -1,5 +1,5 @@
 name:               mml
-version:            0.2.0
+version:            0.3.0
 synopsis:           Haskell implementation of the Minimal Markup Language.
 -- description:
 homepage:           http://github.com/michael-olney/mml
