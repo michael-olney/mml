@@ -63,7 +63,7 @@ inlineExps = everywhereM $ mkM inline
         inline :: [Exp] -> IO [Exp]
         inline (Tag ('@':src) env Nothing sm:xs) = do
             let uenv = M.map unwrapExpList env
-            head <- (tryInclude uenv src) >>= inline
+            head <- (tryInclude uenv (src ++ ".mtag")) >>= inline
             return $ head ++ xs
         inline (Tag "#readfile" env (Just (ExpList path)) sm:xs) = do
             head <- tryReadFile $ unwrapStr path
