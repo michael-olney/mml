@@ -1,28 +1,33 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RankNTypes #-}
 
 module MML.Format.HTML (toHTML, fromHTML) where
 
 import MML.Types
 
+import Control.Monad
+import Control.Monad.Trans.Class
 import qualified Data.Map as M
 import qualified Data.ByteString.Lazy as BS
 import Prelude hiding (head, id, div, exp)
-import Text.Blaze.Html5 hiding (title)
-import Text.Blaze.Internal
-import Text.Blaze.Renderer.Utf8 (renderMarkup)
+import Text.BlazeT.Html5 hiding (title)
+import Text.BlazeT.Internal
+import Text.BlazeT.Renderer.Utf8 (renderMarkup)
+
+type MarkupE = MarkupT (Either String) ()
 
 toHTML :: Doc -> IO (Either String BS.ByteString)
-toHTML doc = return . Right $ renderMarkup $ document doc
+toHTML doc = return $ execWith renderMarkup $ document doc
 
+document :: Doc -> MarkupE
 document doc = docTypeHtml $ exps doc
 
-exps :: [Exp] -> Html
+exps :: [Exp] -> MarkupE
 exps = mapM_ exp
 
-expList :: ExpList -> Html
+expList :: ExpList -> MarkupE
 expList = exps . unwrapExpList
 
-exp :: Exp -> Html
+exp :: Exp -> MarkupE
 exp (Str str _) =
     toMarkup str
 exp (Tag name attrs Nothing _) =
@@ -30,8 +35,11 @@ exp (Tag name attrs Nothing _) =
 exp (Tag name attrs (Just body) _) =
     applyAttrs attrs $ customParent (stringTag name) (expList body)
 
-applyAttrs :: AttrMap -> Html -> Html
-applyAttrs attrs html = foldl func html $ M.toList attrs
+applyAttrs :: AttrMap -> MarkupE -> MarkupE
+applyAttrs attrs html =
+    case foldM func html $ M.toList attrs of
+        Left err    -> lift $ Left err
+        Right act   -> act
     where
         func html (key, ExpList [Str str _]) =
             let
@@ -39,8 +47,8 @@ applyAttrs attrs html = foldl func html $ M.toList attrs
                 val = stringValue str
                 attribute = customAttribute tag val
             in
-                html ! attribute
-        func html (key, _)           = error "non-str encountered in attribute"
+                Right $ html ! attribute
+        func html (key, _) = Left "non-str encountered in attribute"
 
 fromHTML :: String -> Doc
 fromHTML = error "conversion from HTML not yet supported"
