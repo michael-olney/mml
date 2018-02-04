@@ -16,24 +16,16 @@ relation between the syntax of MML and HTML:
 | `two&nbsp;&nbsp;spaces` | `two~~spaces`          |
 
 Unlike HTML or XML, whitespace reduction within a tag body is part
-of the syntax. The rule is simple: spaces occurring between two
-tags which are not listed as [phrasing content][2] in the HTML standard
-is eliminated completely. All other whitespace is reduced to a single
-non-breaking space (U+00A0). Whitespace that is escaped using a
-backslash is not considered whitespace for the purposes
-of whitespace handling. In this approach whitespace being used to
-neatly arrange the source markup is eliminated before the rendering
-stage is reached. Additional non-breaking spaces can be introduced
-using the tilde character ('~').
+of the syntax, and whitespace is generally emitted as non-breaking
+to prevent the renderer from collapsing it any further.
 
-C-style comments are available (but not C++-style single-line
-comments). Characters are escaped either by preceding them with a
-backslash ('\') or surrounding them with backticks ('\`'). Literal
-characters are passed on as literal to HTML, but no attempt is made
-to prevent the renderer from doing things like collapsing whitespace.
-However, the syntax is designed to deal with these issues at the syntax
-level so that users don't usually have to worry about HTML's whitespace
-rules.
+C-style comments ('/* */') are available. Characters are escaped either
+by preceding them with a backslash ('\') or surrounding them with
+backticks ('\`'). Literal characters are passed on as literal to HTML,
+but no attempt is made to prevent the renderer from doing things like
+collapsing whitespace. However, the syntax is designed to deal with these
+issues at the syntax level so that users don't usually have to worry about
+HTML's whitespace rules.
 
 Mammal is inspired partly by Erik Naggum's unreleased [Enamel][1]
 (NML) markup language.
@@ -80,6 +72,10 @@ Some limitations that might be useful to fix in a future version:
   presented in the same way.
 * No control structures aside from invocation of other templates
   are provided for use within templates.
+* CSS is not encapsulated by the templates. Ideally, templates
+  would provide their own custom CSS attributes and selectors and
+  all the HTML tags in the expansion would be hidden from any
+  external CSS selectors.
 
 ## Running
 

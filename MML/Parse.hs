@@ -3,7 +3,7 @@ LANGUAGE    FlexibleContexts, TupleSections, ScopedTypeVariables,
             ViewPatterns
 #-}
 
-module MML.Parse (parse, isEmptyIntermItem, elimMiddle, elimSides) where
+module MML.Parse (parse) where
 
 import MML.Types
 import MML.Lex
@@ -22,6 +22,7 @@ import Control.Monad.Trans.Class
 import Data.List
 import Data.Either
 import qualified Data.Map as M
+import qualified Data.Set as S
 import Data.Generics
 
 type Parser a = Parsec [TokenPos] () a
@@ -33,6 +34,19 @@ sourceLoc = do
     let line = sourceLine sp
     let col = sourceColumn sp
     return $ (SourceLoc name line col)
+
+phrasingTags = S.fromList [
+    "a", "abbr", "audio", "b", "bdi", "bdo",
+    "br", "button", "cite", "code", "data",
+    "datalist", "del", "em", "i", "ins",
+    "kbd", "mark", "math", "meter",
+    "output", "q", "ruby", "s", "samp",
+    "small", "span", "strong", "sub", "sup",
+    "time", "u", "var", "wbr"
+    ]
+
+isPhrasing :: String -> Bool
+isPhrasing x = S.member x phrasingTags
 
 ----------------------------
 --- Whitespace Reduction ---
@@ -51,6 +65,11 @@ isEmptyIntermItem = (== 0) . (gcount $ mkQ False query) . clearAttrs
         clearAttrs :: ElimIntermItem -> ElimIntermItem
         clearAttrs = everywhere $ mkT clearAttrsT
         clearAttrsT (m::TokenAttrMap) = M.empty
+
+isPhrasingIntermItem :: ElimIntermItem -> Bool
+isPhrasingIntermItem (Right (Tag (isPhrasing -> True) _ _ _))   = True
+isPhrasingIntermItem (Left (TChar _, _))                        = True
+isPhrasingIntermItem _                                          = False
 
 toElimInterm :: [TokenExp] -> ElimInterm
 toElimInterm = concatMap aux
@@ -85,28 +104,47 @@ elimSpacesFlat = post . elim . pre
         post = ExpList . fromElimInterm
         elim = elimSides . elimMiddle
 
-elimMiddle :: ElimInterm -> ElimInterm
-elimMiddle = concatMap elim  . groupBy (\x y -> gpred x == gpred y)
-    where
-        gpred = isEmptyIntermItem
+tripleMap ::  (a -> a -> a -> a) -> [a] -> [a]
+tripleMap f (x:y:z:rest) = x : tripleMap f (f x y z:z:rest)
+tripleMap f x = x
 
-        elim [] = []
-        elim run@((isEmptyIntermItem -> True):_)
-            | spaces /= []  = head spaces : suffix
-            | otherwise     = suffix
-            where
-                spaces = filter isSpaceInterm run
-                suffix = filter (not . isSpaceInterm) run
-        elim run = run
+data ElimClass = Space | Phras | Other
+    deriving (Eq, Show, Ord)
+
+elimMiddle :: ElimInterm -> ElimInterm
+elimMiddle = concat
+                . tripleMap elim
+                . groupBy (\x y -> classify x == classify y)
+    where
+        classify (isSpaceIntermItem -> True)    = Space
+        classify (isPhrasingIntermItem -> True) = Phras
+        classify _                              = Other
+
+        classifyHead (x:_)  = classify x
+        classifyHead _      = Space
+
+        ch = classifyHead
+
+        elim :: ElimInterm -> ElimInterm -> ElimInterm -> ElimInterm
+        elim (ch -> Space) (ch -> Space)     _             = error "internal"
+        elim _             (ch -> Space)     (ch -> Space) = error "internal"
+        elim (ch -> Other) (ch -> Space)     _             = []
+        elim _             (ch -> Space)     (ch -> Other) = []
+        elim (ch -> Phras) run@(ch -> Space) (ch -> Phras) = collapse run
+        elim _             x                 _             = x
+
+        collapse :: ElimInterm -> ElimInterm
+        collapse []  = []
+        collapse run = [Left (TSpace, snd . unwrapL . head $ run)]
 
 elimSides :: ElimInterm -> ElimInterm
 elimSides = elimLeft . elimRight
     where
-        elimLeft = dropWhile isSpaceInterm
+        elimLeft = dropWhile isSpaceIntermItem
         elimRight = reverse . elimLeft . reverse
 
-isSpaceInterm (Left (x, _)) = isSpace x
-isSpaceInterm _             = False
+isSpaceIntermItem (Left (x, _)) = isSpace x
+isSpaceIntermItem _             = False
 
 -------------------------------
 --- Main Parser Definitions ---
@@ -207,9 +245,6 @@ type TokenExpList = ExpListAux Token
 tokToChar :: Token -> Char
 tokToChar (TChar c)         = c
 tokToChar TSpace            = ' '
-tokToChar (TBrace BDOpen)   = '{'
-tokToChar (TBrace BDClose)  = '}'
-tokToChar TSplit            = '→'
 
 convertTokens :: TokenExp -> Exp
 convertTokens = fmap tokToChar
