@@ -16,8 +16,8 @@ relation between the syntax of MML and HTML:
 | `two&nbsp;&nbsp;spaces` | `two~~spaces`          |
 
 Unlike HTML or XML, whitespace reduction within a tag body is part
-of the syntax, and whitespace is generally emitted as non-breaking
-to prevent the renderer from collapsing it any further.
+of the syntax, though the renderer is free to reduce the emitted
+whitespace further.
 
 C-style comments ('/* */') are available. Characters are escaped either
 by preceding them with a backslash ('\') or surrounding them with
