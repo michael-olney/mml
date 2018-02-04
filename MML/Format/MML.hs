@@ -14,22 +14,30 @@ import System.IO
 import Data.Generics.Schemes
 import Data.Generics.Aliases
 
+import Control.Exception
 import Control.Monad.Extra
 import Control.DeepSeq
 
 toMML = error "conversion to MML not yet supported"
+
+data MMLException = MMLException String
+    deriving Show
+
+instance Exception MMLException
+
+unwrapEx (MMLException x) = x
 
 subst :: M.Map String [Exp] -> [Exp] -> [Exp]
 subst env = everywhere $ mkT aux
     where
         aux :: [Exp] -> [Exp]
         aux (Tag ('$':name) (M.toList -> []) Nothing sm:xs)
-            | M.member name env     = (env M.! name) ++ (aux xs)
-            | otherwise             = error $ "unbound variable '" ++ name ++ "'"
+            | M.member name env     = (env M.! name)
+            | otherwise             =
+                throw (MMLException $ "unbound variable '" ++ name ++ "'")
         aux (Tag ('$':_) _ _ _:xs) =
-            error "malformed variable tag"
-        aux x =
-            x
+            throw (MMLException $ "malformed variable tag")
+        aux x = x
 
 tryInclude :: M.Map String [Exp] -> String -> IO [Exp]
 tryInclude env path = do
@@ -69,16 +77,21 @@ inlineExps = everywhereM $ mkM inline
             head <- tryReadFile $ unwrapStr path
             return $ head ++ xs
         inline (Tag "#readfile" env Nothing sm:xs) =
-            error "missing file path in #readfile"
+            throw (MMLException "missing file path in #readfile")
         inline x =
             return x
 
 fromMML :: String -> BS.ByteString -> IO (Either String Doc)
 fromMML infile bs = do
-    mmlp <- Pure.fromMMLPure infile bs
-    case mmlp of
-        Left err    -> return . Left $ err
-        Right mmlp  -> do
-            mml <- inlineExps $ mmlp
-            return . Right $ mml
-
+    res <- try aux
+    return (case res of
+        Left err -> Left . unwrapEx $ err
+        Right doc -> Right doc)
+    where
+        aux = do
+            mmlp <- Pure.fromMMLPure infile bs
+            case mmlp of
+                Left err    -> error err
+                Right mmlp  -> do
+                    mml <- inlineExps $ mmlp
+                    return  mml
