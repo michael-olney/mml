@@ -1,81 +1,47 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module MML.Format.HTML (toHTML, fromHTML) where
 
 import MML.Types
-import Data.Char
-import Data.List
+
 import qualified Data.Map as M
 import qualified Data.ByteString.Lazy as BS
-import qualified Data.ByteString.Lazy.UTF8 as UTF8 (fromString)
-
-header = "<!DOCTYPE HTML>"
-footer = ""
+import Prelude hiding (head, id, div, exp)
+import Text.Blaze.Html5 hiding (title)
+import Text.Blaze.Internal
+import Text.Blaze.Renderer.Utf8 (renderMarkup)
 
 toHTML :: Doc -> IO (Either String BS.ByteString)
-toHTML doc = do
-    let str = header ++ (convExps . ExpList $ doc) ++ footer
-    return . Right . UTF8.fromString $ str
+toHTML doc = return . Right $ renderMarkup $ document doc
+
+document doc = docTypeHtml $ exps doc
+
+exps :: [Exp] -> Html
+exps = mapM_ exp
+
+expList :: ExpList -> Html
+expList = exps . unwrapExpList
+
+exp :: Exp -> Html
+exp (Str str _) =
+    toMarkup str
+exp (Tag name attrs Nothing _) =
+    applyAttrs attrs $ customLeaf (stringTag name) True
+exp (Tag name attrs (Just body) _) =
+    applyAttrs attrs $ customParent (stringTag name) (expList body)
+
+applyAttrs :: AttrMap -> Html -> Html
+applyAttrs attrs html = foldl func html $ M.toList attrs
+    where
+        func html (key, ExpList [Str str _]) =
+            let
+                tag = stringTag key
+                val = stringValue str
+                attribute = customAttribute tag val
+            in
+                html ! attribute
+        func html (key, _)           = error "non-str encountered in attribute"
 
 fromHTML :: String -> Doc
 fromHTML = error "conversion from HTML not yet supported"
-
--- Intended to be just enough to cover both
--- character data and double-quoted attribute values
-escape :: String -> String
-escape s = aux s
-    where
-        aux []          = ""
-        aux ('&':cs)    = "&amp;" ++ (aux cs)
-        aux ('"':cs)    = "&quot;" ++ (aux cs)
-        aux ('<':cs)    = "&lt;" ++ (aux cs)
-        aux ('>':cs)    = "&gt;" ++ (aux cs)
-        aux (c:cs)      = c:(aux cs)
-
--- XXX Doesn't cover the full range
-isValidName :: String -> Bool
-isValidName [] = False
-isValidName (c:cs) = (start c) && (aux cs)
-    where
-        start c = (isAlpha c) || (c == ':') || (c == '_')
-        aux [] = True
-        aux (c:cs) = (val c) && (aux cs)
-        val c = ((start c) || (isNumber c) || (c == '-')
-            || (c == '.'))
-
-convExps :: ExpList -> String
-convExps = (foldl (\s c -> s ++ (conv c)) "") . unwrapExpList
-
--- TODO escape names..
-convAttrAux :: String -> ExpList -> String
-convAttrAux name (ExpList [Str val _]) =
-    name ++ "=\"" ++ (escape val) ++ "\""
-convAttrAux name (ExpList []) =
-    error "attribute values must not be empty"
-convAttrAux name (ExpList xs@(_:_)) =
-    error ("attribute values must resolve to single value: " ++ (show xs))
-
-convAttr :: (String, ExpList) -> String
-convAttr (name, xs) = convAttrAux name xs
-
-convAttrs :: [(String, ExpList)] -> String
-convAttrs = (intercalate " ") . (map convAttr)
-
-convTag :: String -> [(String, ExpList)] -> Maybe ExpList -> String
-convTag name [] Nothing =
-    "<" ++ name ++ "/>"
-convTag name as Nothing =
-    "<" ++ name ++ " " ++ (convAttrs as) ++ "/>"
-convTag name [] (Just cs) =
-    "<" ++ name ++ ">"
-    ++ (convExps cs)
-    ++ "</" ++ name ++ ">"
-convTag name as (Just cs) =
-    "<" ++ name ++ " " ++ (convAttrs as) ++ ">"
-    ++ (convExps cs)
-    ++ "</" ++ name ++ ">"
-
-conv :: Exp -> String
-conv t@(Tag name as children _)
-                        | isValidName name  = convTag name (M.toList as) children
-                        | otherwise         = error $ "bad tag name: " ++ name
-conv (Str s _) = escape s
 
