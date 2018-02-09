@@ -32,7 +32,7 @@ subst env = everywhere $ mkT aux
     where
         aux :: [Exp] -> [Exp]
         aux (Tag ('$':name) (M.toList -> []) Nothing sm:xs)
-            | M.member name env     = (env M.! name)
+            | M.member name env     = (env M.! name) ++ xs
             | otherwise             =
                 throw (MMLException $ "unbound variable '" ++ name ++ "'")
         aux (Tag ('$':_) _ _ _:xs) =
