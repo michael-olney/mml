@@ -81,7 +81,7 @@ Some limitations that might be useful to fix in a future version:
 
 To install the package, use cabal:
 
-    $ cabal install mml
+    $ stack install
 
 To convert an MML file to HTML, run the `mml` command:
 
