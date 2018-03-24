@@ -92,7 +92,7 @@ A more complete tool would need lots of extra features, including:
 
 ## Running
 
-To install the package, use cabal:
+To install the package, use stack:
 
     $ stack install
 
