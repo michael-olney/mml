@@ -1,11 +1,14 @@
-# Mammal
+# MML
 
 **Author:** Michael Olney &lt;michael@spectralforms.com&gt;<br/>
 **Version:** 0.3<br/>
 **Status:** Unstable<br/>
 
-Mammal (MML) is a markup language intended to provide a simplified
-method for specifying HTML documents. The following table shows the
+MML is a markup language intended to provide a better
+way to specify HTML documents. The main advantages are a simplified
+syntax and a template system that makes it easier to achieve
+abstraction when specifying document contents.
+The following table shows the
 relation between the syntax of MML and HTML:
 
 | HTML                    | MML                    |
@@ -15,7 +18,7 @@ relation between the syntax of MML and HTML:
 | `<a href=cat>meow</a>`  | `{a{href->cat}->meow}` |
 | `two&nbsp;&nbsp;spaces` | `two~~spaces`          |
 
-Unlike HTML or XML, whitespace reduction within a tag body is part
+Unlike HTML, whitespace reduction within a tag body is part
 of the syntax, though the renderer is free to reduce the emitted
 whitespace further.
 
@@ -27,15 +30,22 @@ collapsing whitespace. However, the syntax is designed to deal with these
 issues at the syntax level so that users don't usually have to worry about
 HTML's whitespace rules.
 
+An important distiction between MML and HTML is that MML attribute
+values can contain the document structures (tags, text etc) that are
+allowed inside tag bodies. HTML allows only strings. This is important
+for the custom tag system.
+
 Mammal is inspired partly by Erik Naggum's unreleased [Enamel][1]
 (NML) markup language.
 
-## Templates
+## Tags as a Form of Abstraction
 
-In addition to the pure syntax, there is also additional, optional
-syntax for basic templates and raw text inclusion. Templates are defined
-by placing files into the path of the MML processor and placing tags
-with names that begin with `$` as variable usages. For example, a
+MML also supports the creation of custom tags through a template syntax.
+Tags are defined by placing MML files (with the extension .mtag) into the
+path of the MML processor containing tags with names beginning with `$` inside
+them. These special tags are treated as variables; when the tag is included in
+an MML file the attributes in the specific instance of the tag are
+substituted into the variables in the .mtag file.  For example, a
 template might be created by placing the following into a file called
 `field-entry.mtag`
 
@@ -60,22 +70,25 @@ semantic style of markup, e.g.:
         {@band-member{name->George Harrison}{portrait->george.jpg}}
     }
 
-## Limitations
+In programming terms, you can think of a custom tag as a function
+that takes in some arguments and returns document structure.
+Under this analogy, the attributes are named arguments and the child
+elements are the the positional arguments.
 
-Some limitations that might be useful to fix in a future version:
+## Future Work
 
-* Template files cannot control whether or not they are treated as
-  phrasing content for the purposes of whitespace reduction, which
-  makes it impossible to define new phrasing tags.
-* Template names are coupled to a fixed template regardless of
-  context, so (CSS aside) the same information always has to be
-  presented in the same way.
-* No control structures aside from invocation of other templates
-  are provided for use within templates.
-* CSS is not encapsulated by the templates. Ideally, templates
-  would provide their own custom CSS attributes and selectors and
-  all the HTML tags in the expansion would be hidden from any
-  external CSS selectors.
+So far MML is just a system I designed to build my personal website with.
+A more complete tool would need lots of extra features, including:
+
+* Control structures and other programming constructs for defining
+  custom tags.
+* Encapsulation of CSS such that selectors cannot be used to cross
+  abstraction boundaries.
+* Custom CSS attributes, so that client CSS can usefully customize
+  any custom elements.
+* A module system. It would be useful to organise tags into modules
+  that can be imported and reused.
+* Encapsulation of DOM elements and other JavaScript structures.
 
 ## Running
 
