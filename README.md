@@ -35,7 +35,7 @@ values can contain the document structures (tags, text etc) that are
 allowed inside tag bodies. HTML allows only strings. This is important
 for the custom tag system.
 
-Mammal is inspired partly by Erik Naggum's unreleased [Enamel][1]
+MML is inspired partly by Erik Naggum's unreleased [Enamel][1]
 (NML) markup language.
 
 ## Tags as a Form of Abstraction
