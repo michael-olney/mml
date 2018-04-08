@@ -38,7 +38,7 @@ for the custom tag system.
 MML is inspired partly by Erik Naggum's unreleased [Enamel][1]
 (NML) markup language.
 
-## Tags as a Form of Abstraction
+## Abstracting Markup With Custom Tags
 
 MML also supports the creation of custom tags through a template syntax.
 Tags are defined by placing MML files (with the extension .mtag) into the
