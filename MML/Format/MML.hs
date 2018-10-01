@@ -68,9 +68,12 @@ tryReadFile path = do
 inlineExps :: [Exp] -> IO [Exp]
 inlineExps = everywhereM $ mkM inline
     where
+        addTagBody Nothing env      = env
+        addTagBody (Just body) env  = M.insert "tag_body" (unwrapExpList body) env
+
         inline :: [Exp] -> IO [Exp]
-        inline (Tag ('@':src) env Nothing sm:xs) = do
-            let uenv = M.map unwrapExpList env
+        inline (Tag ('@':src) env body sm:xs) = do
+            let uenv = addTagBody body $ M.map unwrapExpList env
             head <- (tryInclude uenv (src ++ ".mtag")) >>= inline
             return $ head ++ xs
         inline (Tag "#readfile" env (Just (ExpList path)) sm:xs) = do
